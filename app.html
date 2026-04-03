@@ -300,6 +300,12 @@ html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color
   <div class="mo-box tall" onclick="event.stopPropagation()" id="addAthContent"></div>
 </div>
 
+
+<!-- Edit Class -->
+<div class="mo" id="editClassModal" onclick="if(event.target===this)K.closeModal('editClassModal')">
+  <div class="mo-box" onclick="event.stopPropagation()" id="editClassContent"></div>
+</div>
+
 <!-- Edit Athlete -->
 <div class="mo" id="editAthModal" onclick="if(event.target===this)K.closeModal('editAthModal')">
   <div class="mo-box tall" onclick="event.stopPropagation()" id="editAthContent"></div>
@@ -537,6 +543,12 @@ async function loadAll() {
     }
     const gymSnap = await getDoc(doc(db,'gyms',gid));
     if (gymSnap.exists()) APP.gymProfile = gymSnap.data();
+    // Load recent coach concerns (notes with issueNotes)
+    try{
+      const threeDaysAgo=new Date(Date.now()-3*86400000).toISOString();
+      const notesSnap=await getDocs(query(collection(db,'notes'),where('gymId','==',gid)));
+      APP.coachConcerns=notesSnap.docs.map(d=>({id:d.id,...d.data()})).filter(n=>n.issueNotes&&n.issueNotes.trim()).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+    }catch(e){APP.coachConcerns=[];}
   } catch(e) { console.warn('loadAll:', e); }
 }
 
@@ -789,6 +801,10 @@ openModal(id, data={}){
     const csel=$('nc_coach');csel.innerHTML=`<option value="">TBD</option>${APP.allCoaches.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}`;
     if(data.day)sval('nc_day',data.day);
   }
+  if(id==='editClassModal'){
+    const cls=APP.allClasses.find(c=>c.id===data.classId);if(!cls)return;
+    $('editClassContent').innerHTML=buildEditClassForm(cls);
+  }
   if(id==='classModal'){const c=APP.allClasses.find(x=>x.id===data.classId);if(!c)return;$('classMoContent').innerHTML=buildClassDetail(c);}
   if(id==='inviteModal'){
     const t=data.type||'coach';APP.inviteType=t;
@@ -803,13 +819,27 @@ openModal(id, data={}){
     const role=data.role||'director';
     const sel=$('msg_to');
     if(role==='director'){
-      sel.innerHTML=`<option value="coaches">All Coaches</option><option value="parents">All Parents</option>${APP.allCoaches.map(c=>`<option value="${c.id}">${c.name} (Coach)</option>`).join('')}`;
+      // Build parent options using athlete first names
+      const parentOpts=APP.allAthletes.map(a=>{
+        const firstName=a.name.split(' ')[0];
+        return `<option value="parent_${a.id}">${firstName}'s Parent (${a.name})</option>`;
+      }).join('');
+      sel.innerHTML=`<option value="coaches">All Coaches</option><option value="parents">All Parents</option>${APP.allCoaches.map(c=>`<option value="${c.id}">${c.name} (Coach)</option>`).join('')}${parentOpts}`;
+      if(data.reminder&&data.ath){
+        // Pre-select this parent and pre-fill reminder message
+        const athId=data.ath.id;
+        sel.value=`parent_${athId}`;
+        const fn=data.ath.name.split(' ')[0];
+        sval('msg_sub',`Tuition Reminder — ${data.ath.name}`);
+        sval('msg_body',`Hi! This is a friendly reminder that ${fn}'s tuition of $${data.ath.tuitionAmount||185}/month is ${data.ath.tuitionStatus==='overdue'?'overdue':'coming up'}. Please reach out if you have any questions. Thank you!`);
+      } else {sval('msg_sub','');sval('msg_body','');}
     } else if(role==='coach'){
       sel.innerHTML=`<option value="director">Director</option>`;
+      sval('msg_sub','');sval('msg_body','');
     } else {
       sel.innerHTML=`<option value="director">Director</option><option value="coaches">My Coach</option>`;
+      sval('msg_sub','');sval('msg_body','');
     }
-    sval('msg_sub','');sval('msg_body','');
   }
   if(id==='msgViewModal'){
     let msgs=APP.messages||[];
@@ -997,6 +1027,50 @@ async coFinish(){
 },
 
 // ─── DIRECTOR ACTIONS ───
+function buildEditClassForm(cls){
+  return `
+  <div class="mo-title">Edit Class</div>
+  <div class="fg"><label class="fl">Class Name *</label><input class="fi" id="ec_name" value="${cls.name||''}"></div>
+  <div class="g2" style="margin-bottom:0;">
+    <div class="fg"><label class="fl">Day</label><select class="fs" id="ec_day">${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=>`<option ${cls.day===d?'selected':''}>${d}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Time *</label><input class="fi" id="ec_time" value="${cls.time||''}"></div>
+  </div>
+  <div class="g2" style="margin-bottom:0;">
+    <div class="fg"><label class="fl">Level</label><select class="fs" id="ec_level">${BELT_LEVELS.map(l=>`<option ${cls.level===l?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Capacity</label><input class="fi" type="number" id="ec_cap" value="${cls.cap||8}" min="1"></div>
+  </div>
+  <div class="fg"><label class="fl">Public Notes</label><textarea class="ft" id="ec_notes" style="min-height:60px;">${cls.notes||''}</textarea></div>
+  <div class="fg"><label class="fl">Coaches Assigned</label>
+    <div style="border:1px solid var(--bdr);border-radius:4px;background:var(--bg);padding:8px;max-height:140px;overflow-y:auto;">
+      ${APP.allCoaches.length===0?'<div style="font-size:12px;color:var(--t3);padding:4px;">No coaches in your gym yet.</div>'
+      :APP.allCoaches.map(c=>`<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;">
+        <input type="checkbox" name="ec_coach" value="${c.id}" style="accent-color:var(--gold);" ${(cls.coaches||[]).includes(c.id)?'checked':''}>
+        <div class="mini-av" style="width:22px;height:22px;font-size:9px;">${ini(c.name)}</div>
+        <span style="font-size:13px;">${c.name} <span style="color:var(--t3);">${c.belt||'Foundation'}</span></span>
+      </label>`).join('')}
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button class="btn" style="flex:1;" onclick="K.closeModal('editClassModal')">Cancel</button>
+    <button class="btn primary" style="flex:1;" onclick="K.saveEditClass('${cls.id}')">Save Changes →</button>
+  </div>`;
+}
+
+async saveEditClass(id){
+  const name=val('ec_name').trim(),day=val('ec_day'),time=val('ec_time').trim();
+  const level=val('ec_level')||'Level 1',cap=+val('ec_cap')||8,notes=val('ec_notes').trim();
+  const selectedCoaches=[...document.querySelectorAll('input[name="ec_coach"]:checked')].map(c=>c.value);
+  const firstCoach=APP.allCoaches.find(c=>c.id===selectedCoaches[0]);
+  const coachName=selectedCoaches.length===0?'TBD':selectedCoaches.length===1?(firstCoach?.name||'TBD'):`${firstCoach?.name||'Coach'} +${selectedCoaches.length-1}`;
+  if(!name||!time){toast('Name and time required','warn');return;}
+  try{
+    const updates={name,day,time,level,cap,notes,coaches:selectedCoaches,coachId:selectedCoaches[0]||null,coachName};
+    await setDoc(doc(db,'classes',id),updates,{merge:true});
+    const cls=APP.allClasses.find(c=>c.id===id);if(cls)Object.assign(cls,updates);
+    K.closeModal('editClassModal');toast('✓ Class updated!');render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
 async saveNewClass(){
   const name=val('nc_name').trim(),day=val('nc_day'),time=val('nc_time').trim();
   const coachId=val('nc_coach'),cap=+val('nc_cap')||8,level=val('nc_level')||'Level 1',notes=val('nc_notes').trim();
@@ -1100,16 +1174,26 @@ async approveTC(id){
 },
 
 async sendMsg(){
-  const to=val('msg_to'),subject=val('msg_sub').trim()||'Message',body=val('msg_body').trim();
+  const toRaw=val('msg_to'),subject=val('msg_sub').trim()||'Message',body=val('msg_body').trim();
   if(!body){toast('Please write a message','warn');return;}
-  // 'coaches','parents','director' = broadcast toRole. Specific uid = direct message toId.
-  const isBroadcast=['coaches','parents','director'].includes(to);
+  const isBroadcast=['coaches','parents','director'].includes(toRaw);
+  const isParentDirect=toRaw.startsWith('parent_');
+  let toId=null,toRole=null;
+  if(isBroadcast){toRole=toRaw;}
+  else if(isParentDirect){
+    // Look up parent's email from athlete profile to find their uid
+    const athId=toRaw.replace('parent_','');
+    const ath=APP.allAthletes.find(a=>a.id===athId);
+    toRole='parents'; // fallback — will also filter by parentEmail on their side
+    if(ath)toId=null; // parent may not have account yet; toRole='parents' catches all
+    // store athleteId for context
+  } else {toId=toRaw;}
+  const threadId=Date.now().toString(36)+Math.random().toString(36).slice(2,5);
   try{
     const data={
       from:APP.profile?.name||'User',fromId:APP.user?.uid,fromRole:APP.role,
-      toId:isBroadcast?null:to,
-      toRole:isBroadcast?to:null,
-      subject,body,preview:body.slice(0,80),
+      toId,toRole,subject,body,preview:body.slice(0,80),
+      threadId,
       time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),
       read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()
     };
@@ -1119,15 +1203,13 @@ async sendMsg(){
   }catch(e){toast('⚠️ '+e.message,'warn');}
 },
 
-async sendReply(toId,toName,subject){
+async sendReply(toId,toName,subject,threadId){
   const body=val('replyBody').trim();
   if(!body){toast('Please write a reply','warn');return;}
-  // Figure out toRole based on who we're replying to
   const toCoach=APP.allCoaches?.find(c=>c.id===toId);
-  const toDir=toId&&!toCoach; // if not a coach uid, assume director
   const toRole=toCoach?null:(toId?null:'director');
   try{
-    const data={from:APP.profile?.name||'User',fromId:APP.user?.uid,fromRole:APP.role,toId:toId||null,toRole,subject,body,preview:body.slice(0,80),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()};
+    const data={from:APP.profile?.name||'User',fromId:APP.user?.uid,fromRole:APP.role,toId:toId||null,toRole,subject,body,preview:'You: '+body.slice(0,70),threadId:threadId||null,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()};
     await addDoc(collection(db,'messages'),data);
     APP.messages=[data,...APP.messages];
     K.closeModal('msgViewModal');toast('✓ Reply sent!');render();
@@ -1151,16 +1233,75 @@ async saveCharge(){
   }catch(e){toast('⚠️ '+e.message,'warn');}
 },
 
+// SUB FLOW:
+// 1. Coach submits → status:'pending' → director sees, approves
+// 2. Director approves → status:'open' → posted to coach sub board
+// 3. Sub coach clicks "I'll take it" → status:'claimed' → director sees, approves sub
+// 4. Director approves sub → sends message to original coach "Can [sub] take your class on [date]? Reply YES."
+// 5. Original coach clicks YES → status:'confirmed' → system notifies all 3
+
 async approveSubReq(id){
-  try{await setDoc(doc(db,'subRequests',id),{status:'open'},{merge:true});const r=APP.subRequests?.find(s=>s.id===id);if(r)r.status='open';toast('✓ Posted to Sub Board');render();}catch(e){toast('⚠️ '+e.message,'warn');}
+  try{
+    await setDoc(doc(db,'subRequests',id),{status:'open'},{merge:true});
+    const r=APP.subRequests?.find(s=>s.id===id);if(r)r.status='open';
+    toast('✓ Posted to Sub Board — coaches can now claim it');render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
 },
 async denySubReq(id){
   try{await setDoc(doc(db,'subRequests',id),{status:'denied'},{merge:true});APP.subRequests=APP.subRequests.filter(s=>s.id!==id);toast('Sub request denied');render();}catch(e){}
 },
 async claimSub(id){
-  try{await setDoc(doc(db,'subRequests',id),{subCoachId:APP.user.uid,subCoachName:APP.profile?.name,status:'claimed'},{merge:true});const r=APP.subRequests?.find(s=>s.id===id);if(r){r.subCoachId=APP.user.uid;r.subCoachName=APP.profile?.name;r.status='claimed';}toast('✓ Claim sent to director!');render();}catch(e){toast('⚠️ '+e.message,'warn');}
+  // Coach claims an open sub — goes back to director for approval
+  try{
+    await setDoc(doc(db,'subRequests',id),{subCoachId:APP.user.uid,subCoachName:APP.profile?.name,status:'claimed'},{merge:true});
+    const r=APP.subRequests?.find(s=>s.id===id);
+    if(r){r.subCoachId=APP.user.uid;r.subCoachName=APP.profile?.name;r.status='claimed';}
+    toast('✓ Request sent to director for approval!');render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+async approveSubClaim(id){
+  // Director approves sub claim → message original coach asking to confirm
+  try{
+    const r=APP.subRequests?.find(s=>s.id===id);if(!r)return;
+    await setDoc(doc(db,'subRequests',id),{status:'awaiting_original'},{merge:true});
+    r.status='awaiting_original';
+    // Send message to original coach
+    const msgData={
+      from:'KINETIC',fromId:'system',fromRole:'system',
+      toId:r.requestedBy,toRole:null,
+      subject:`Sub Request — ${r.className} on ${r.date}`,
+      body:`${r.subCoachName} has volunteered to cover your class ${r.className} on ${r.date}. Do you approve?
+
+Reply YES to confirm.`,
+      preview:`${r.subCoachName} wants to cover your class. Reply YES to confirm.`,
+      subRequestId:id,type:'sub_confirm_request',
+      time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),
+      read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()
+    };
+    const msgRef=await addDoc(collection(db,'messages'),msgData);
+    APP.messages=[{id:msgRef.id,...msgData},...APP.messages];
+    toast(`✓ Approval request sent to ${r.requestedByName}`);render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+async confirmSubFromCoach(subReqId){
+  // Original coach says YES — finalize and notify everyone
+  try{
+    const r=APP.subRequests?.find(s=>s.id===subReqId);if(!r)return;
+    await setDoc(doc(db,'subRequests',subReqId),{status:'confirmed'},{merge:true});
+    r.status='confirmed';
+    const announcement=`${r.subCoachName} is subbing ${r.className} on ${r.date}.`;
+    // Notify original coach
+    const m1={from:'KINETIC',fromId:'system',fromRole:'system',toId:r.requestedBy,toRole:null,subject:`Confirmed: Sub for ${r.className}`,body:announcement,preview:announcement,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()};
+    // Notify sub coach
+    const m2={...m1,toId:r.subCoachId,subject:`You're confirmed: ${r.className} on ${r.date}`};
+    // Notify director (broadcast)
+    const m3={...m1,toId:null,toRole:'director',subject:`Sub Confirmed: ${r.className} on ${r.date}`};
+    await Promise.all([addDoc(collection(db,'messages'),m1),addDoc(collection(db,'messages'),m2),addDoc(collection(db,'messages'),m3)]);
+    toast(`✓ Confirmed! ${r.subCoachName} is subbing. All parties notified.`);render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
 },
 async confirmSub(id){
+  // Legacy — kept for safety
   try{await setDoc(doc(db,'subRequests',id),{status:'confirmed'},{merge:true});const r=APP.subRequests?.find(s=>s.id===id);if(r)r.status='confirmed';toast('✓ Sub confirmed!');render();}catch(e){}
 },
 async submitSubReq(){
@@ -1172,6 +1313,13 @@ async submitSubReq(){
     K.closeModal('subReqModal');toast('✓ Sub request sent!');
   }catch(e){toast('⚠️ '+e.message,'warn');}
 },
+async sendTuitionReminder(athId){
+  const ath=APP.allAthletes.find(a=>a.id===athId);if(!ath)return;
+  // Pre-fill a new message to the parent
+  APP._reminderAth=ath;
+  K.openModal('newMsgModal',{role:'director',reminder:true,ath});
+},
+
 async resolveInjury(id){
   try{await setDoc(doc(db,'injuries',id),{status:'resolved'},{merge:true});const inj=APP.allInjuries?.find(i=>i.id===id);if(inj)inj.status='resolved';toast('✓ Resolved');render();}catch(e){}
 },

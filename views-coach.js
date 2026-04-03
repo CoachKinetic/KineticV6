@@ -1,4 +1,5 @@
 import { APP, SKILLS, BELT_COLORS, BELT_LEVELS, ini } from './firebase-config.js';
+import { msgInbox } from './views-director.js';
 
 export function coachDash(){
   const my=APP.allClasses.filter(c=>(c.coaches||[]).includes(APP.user?.uid)||c.coachId===APP.user?.uid);
@@ -167,7 +168,14 @@ export function coachSched(){
 
 export function coachMsgs(){
   const msgs=(APP.messages||[]).filter(m=>m.toId===APP.user?.uid||m.toRole==='coaches'||m.fromId===APP.user?.uid);
-  return msgList(msgs,'coach');
+  // Check for sub confirmation requests needing action
+  const subConfirms=msgs.filter(m=>m.type==='sub_confirm_request');
+  const confirmBanner=subConfirms.length?subConfirms.map(m=>`
+    <div class="alert warn" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div><strong>Sub Request:</strong> ${m.body?.split('\n')[0]||m.subject}</div>
+      <button class="btn primary" style="font-size:11px;white-space:nowrap;" onclick="window.K.confirmSubFromCoach('${m.subRequestId||''}')">✓ Yes, approve</button>
+    </div>`).join(''):'';
+  return confirmBanner + msgInbox(msgs,'coach');
 }
 
 export function coachProfile(){

@@ -1,4 +1,5 @@
 import { APP, SKILLS, BELT_COLORS, ini } from './firebase-config.js';
+import { msgInbox } from './views-director.js';
 
 function switcher(idx, dest){
   const a=APP.parentAthletes||[];
@@ -116,17 +117,5 @@ export function parentTuition(){
 
 export function parentMsgs(){
   const msgs=(APP.messages||[]).filter(m=>m.toId===APP.user?.uid||m.toRole==='parents'||m.fromId===APP.user?.uid);
-  return `
-  <div class="sec-hdr"><h3>Messages</h3><button class="btn primary" onclick="window.K.openModal('newMsgModal',{role:'parent'})">+ New Message</button></div>
-  <div class="card"><div class="card-body">
-    ${msgs.length===0?`<div style="padding:24px;text-align:center;color:var(--t3);">No messages yet.</div>`
-    :msgs.map((m,i)=>`<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--bdr2);cursor:pointer;" onclick="window.K.openModal('msgViewModal',{idx:${i},role:'parent'})">
-      <div class="mini-av">${ini(m.from||'?')}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;justify-content:space-between;"><div style="font-size:13px;font-weight:${!m.read?700:500};">${m.from||'Staff'}</div><div style="font-size:11px;color:var(--t3);">${m.time||''}</div></div>
-        <div style="font-size:13px;font-weight:${!m.read?600:400};margin-top:2px;">${m.subject||''}</div>
-        <div style="font-size:12px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${m.preview||m.body||''}</div>
-      </div>
-    </div>`).join('')}
-  </div></div>`;
+  return msgInbox(msgs,'parent');
 }
