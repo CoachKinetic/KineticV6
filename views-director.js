@@ -35,11 +35,24 @@ export function dirHome(){
       <div style="font-size:13px;">${n.issueNotes}</div>
     </div>`;
   }).join('')}`:''}
-  ${pending>0||tcP>0||injP>0?`<div class="sec-hdr"><h3>Action Required</h3></div>
-      ${pending>0?`<div class="alert warn" style="cursor:pointer;" onclick="window.K.nav('dirSubs')">🔄 <strong>${pending} sub request${pending>1?'s':''}</strong> need your approval</div>`:''}
-      ${tcP>0?`<div class="alert warn" style="cursor:pointer;" onclick="window.K.nav('dirTimecards')">⏱️ <strong>${tcP} timecard${tcP>1?'s':''}</strong> pending approval</div>`:''}
-      ${injP>0?`<div class="alert danger" style="cursor:pointer;" onclick="window.K.nav('dirInjuries')">🚑 <strong>${injP} injury report${injP>1?'s':''}</strong> need review</div>`:''}
-      `:''}
+  ${(()=>{
+    const claimed=(APP.subRequests||[]).filter(r=>r.status==='claimed').length;
+    const needsAction=pending+claimed;
+    return needsAction>0||tcP>0||injP>0?`<div class="sec-hdr"><h3>Action Required</h3></div>
+      ${pending>0?`<div class="alert warn" style="cursor:pointer;" onclick="window.K.nav('dirSubs')">🔄 <strong>${pending}</strong> sub request${pending>1?'s':''} need approval</div>`:''}
+      ${claimed>0?`<div class="alert warn" style="cursor:pointer;" onclick="window.K.nav('dirSubs')">✋ <strong>${claimed}</strong> sub volunteer${claimed>1?'s':''} need your OK</div>`:''}
+      ${tcP>0?`<div class="alert warn" style="cursor:pointer;" onclick="window.K.nav('dirTimecards')">⏱️ <strong>${tcP}</strong> timecard${tcP>1?'s':''} pending approval</div>`:''}
+      ${injP>0?`<div class="alert danger" style="cursor:pointer;" onclick="window.K.nav('dirInjuries')">🚑 <strong>${injP}</strong> injury report${injP>1?'s':''} need review</div>`:''}
+      `:'';
+  })()}
+  ${(APP.subRequests||[]).filter(r=>r.status==='confirmed').length>0?`
+  <div class="sec-hdr" style="margin-top:4px;"><h3>✓ Confirmed Subs</h3></div>
+  ${(APP.subRequests||[]).filter(r=>r.status==='confirmed').slice(0,3).map(r=>`
+  <div class="class-card" style="border-left-color:var(--green);margin-bottom:8px;">
+    <div class="cn">${r.className}</div>
+    <div class="cm" style="margin-top:4px;"><span>📅 ${r.date}</span><span>Sub: <strong>${r.subCoachName}</strong></span></div>
+    <span class="pill present" style="margin-top:6px;display:inline-flex;">Confirmed</span>
+  </div>`).join('')}`:''}
       <div class="sec-hdr" style="margin-top:8px;"><h3>Quick Actions</h3></div>
       <div class="g2">
         <div class="tile" onclick="window.K.openModal('inviteModal',{type:'coach'})"><div class="ti">🧑‍🏫</div><div class="tl">Invite Coach</div></div>
@@ -184,7 +197,76 @@ export function dirTimecards(){
 }
 
 export function dirMsgs(){
-  return msgInbox(APP.messages||[],'director');
+  const tab=APP.msgTab||'unread';
+  const filter=APP.msgFilter||'all';
+  const all=APP.messages||[];
+  const me=APP.user?.uid;
+
+  // Classify messages
+  const isCoachMsg=m=>m.fromRole==='coach'||(m.toRole==='coaches')||APP.allCoaches?.find(c=>c.id===m.fromId||c.id===m.toId);
+  const isParentMsg=m=>m.fromRole==='parent'||(m.toRole==='parents')||(!isCoachMsg(m)&&m.fromRole!=='system');
+
+  const unread=all.filter(m=>!m.read&&m.fromId!==me&&m.fromId!=='system');
+  const read=all.filter(m=>(m.read||m.fromId===me)&&m.fromId!=='system');
+  const sent=all.filter(m=>m.fromId===me);
+  const sys=all.filter(m=>m.fromId==='system');
+
+  const applyFilter=(msgs)=>{
+    if(filter==='coaches') return msgs.filter(isCoachMsg);
+    if(filter==='parents') return msgs.filter(isParentMsg);
+    return msgs;
+  };
+
+  const counts={unread:unread.length,read:read.length,sent:sent.length};
+  const tabMsgs={unread:applyFilter(unread),read:applyFilter(read),sent:applyFilter(sent)};
+  const displayMsgs=tabMsgs[tab]||[];
+
+  // Find indices in master array
+  const withIdx=displayMsgs.map(m=>({msg:m,idx:all.indexOf(m)}));
+
+  return `
+  <div class="sec-hdr"><h3>Messages</h3><button class="btn primary" onclick="window.K.openModal('newMsgModal',{role:'director'})">+ New Message</button></div>
+
+  <div style="display:flex;gap:0;margin-bottom:16px;border:1px solid var(--bdr);border-radius:6px;overflow:hidden;">
+    ${[['unread','Inbox',counts.unread],['read','Read',counts.read],['sent','Sent',counts.sent]].map(([t,label,cnt])=>`
+    <button onclick="APP.msgTab='${t}';window.K.nav('dirMsgs')"
+      style="flex:1;padding:10px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:none;border-right:1px solid var(--bdr);transition:all 0.15s;
+      background:${tab===t?'var(--gold)':'var(--panel)'};color:${tab===t?'var(--sb)':'var(--t2)'};">
+      ${label}${cnt>0&&t==='unread'?` <span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;">${cnt}</span>`:''}
+    </button>`).join('')}
+  </div>
+
+  <div style="display:flex;gap:6px;margin-bottom:12px;">
+    ${[['all','All'],['coaches','Coaches 🧑‍🏫'],['parents','Parents 👪']].map(([f,label])=>`
+    <button onclick="APP.msgFilter='${f}';window.K.nav('dirMsgs')"
+      class="btn ${filter===f?'primary':''}" style="font-size:10px;padding:5px 12px;">${label}</button>`).join('')}
+  </div>
+
+  ${withIdx.length===0?`<div class="card"><div style="padding:32px;text-align:center;color:var(--t3);">
+    <div style="font-size:32px;margin-bottom:10px;">${tab==='unread'?'📬':tab==='sent'?'📤':'📭'}</div>
+    <div>${tab==='unread'?'No new messages':'No messages here yet'}</div>
+  </div></div>`:`<div class="card"><div class="card-body">
+    ${withIdx.map(({msg:m,idx:i})=>{
+      const isMine=m.fromId===me;
+      const isUnread=!m.read&&!isMine;
+      const preview=isMine?`You: ${m.preview||m.body||''}`:m.preview||m.body||'';
+      const stripRe=s=>(s||'').replace(/^(Re:\s*)+/i,'').trim().toLowerCase();
+      const tid=m.threadId||(m.subRequestId?'sub_'+m.subRequestId:null)||stripRe(m.subject)||String(i);
+      const threadCount=(all.filter(x=>{const xt=x.threadId||(x.subRequestId?'sub_'+x.subRequestId:null)||stripRe(x.subject)||'_';return xt===tid;})).length;
+      return `<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--bdr2);cursor:pointer;${isUnread?'background:rgba(181,153,106,0.04);':''}" onclick="window.K.openModal('msgViewModal',{idx:${i},role:'director',tid:'${tid.replace(/['"]/g,'')}'})" >
+        <div class="mini-av" style="${isUnread?'background:linear-gradient(135deg,var(--gold),#7A5A2A);color:var(--sb);':''}">${ini(m.from||'?')}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:13px;font-weight:${isUnread?700:500};">${isMine?`To: ${m.toRole||'recipient'}`:m.from||'Unknown'} <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;text-transform:uppercase;color:var(--gold);opacity:0.7;">${m.fromRole||''}</span></div>
+            <div style="display:flex;align-items:center;gap:6px;">${threadCount>1?`<span style="font-size:9px;color:var(--t3);border:1px solid var(--bdr);border-radius:10px;padding:1px 6px;">${threadCount}</span>`:''}<span style="font-size:11px;color:var(--t3);">${m.time||''}</span></div>
+          </div>
+          <div style="font-size:13px;font-weight:${isUnread?600:400};margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.subject||''}</div>
+          <div style="font-size:12px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;">${preview}</div>
+        </div>
+        ${isUnread?`<div style="width:7px;height:7px;border-radius:50%;background:var(--gold);flex-shrink:0;margin-top:5px;"></div>`:''}
+      </div>`;
+    }).join('')}
+  </div></div>`}`;
 }
 
 export function dirBilling(){

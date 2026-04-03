@@ -239,9 +239,9 @@ html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color
           <div class="r-btn" data-role="parent" onclick="K.pickRole(this)"><div class="ri">👪</div><div class="rn">Parent</div></div>
         </div>
         <div class="inv-wrap" id="invWrap">
-          <label class="fl">Invite Code (from your director)</label>
-          <input class="fi" id="upCode" placeholder="Enter your 6-character code" style="letter-spacing:3px;font-weight:700;text-transform:uppercase;">
-          <p style="font-size:11px;color:var(--t3);margin-top:4px;">Your director generates this when they invite you.</p>
+          <div style="background:rgba(181,153,106,0.08);border:1px solid rgba(181,153,106,0.2);border-radius:6px;padding:10px 14px;font-size:12px;color:#7A5C2E;margin-bottom:6px;">
+            ✓ Use the email address your director registered you with — you'll be automatically linked to your gym.
+          </div>
         </div>
         <button class="btn primary full" onclick="K.signUp()" id="upBtn">Create Account →</button>
         <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--t3);">Already have an account? <span style="color:var(--gold);cursor:pointer;" onclick="K.switchTab('in')">Sign in →</span></p>
@@ -454,6 +454,22 @@ html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color
   </div>
 </div>
 
+<!-- Change Password (first login) -->
+<div class="mo" id="changePwModal" onclick="">
+  <div class="mo-box" onclick="event.stopPropagation()">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:36px;margin-bottom:10px;">🔐</div>
+      <div class="mo-title">Welcome to KINETIC!</div>
+      <p style="font-size:13px;color:var(--t2);margin-top:6px;">Your account was set up with a temporary password. Please create a new one before continuing.</p>
+    </div>
+    <div class="auth-err" id="cpErr"></div>
+    <div class="fg"><label class="fl">New Password (6+ characters)</label><input class="fi" type="password" id="cpNew" placeholder="Create your password"></div>
+    <div class="fg"><label class="fl">Confirm Password</label><input class="fi" type="password" id="cpConf" placeholder="Confirm your password"></div>
+    <button class="btn primary full" onclick="K.changePassword()">Set My Password →</button>
+    <button class="btn full" style="margin-top:8px;" onclick="K.closeModal('changePwModal')">Do this later</button>
+  </div>
+</div>
+
 <!-- Lesson Plan -->
 <div class="mo" id="lpModal" onclick="if(event.target===this)K.closeModal('lpModal')">
   <div class="mo-box" onclick="event.stopPropagation()" style="text-align:center;">
@@ -467,8 +483,9 @@ html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color
 
 <script type="module">
 import { auth, db, APP, SKILLS, BELT_COLORS, BELT_LEVELS, ini, bc, greet, toast, sync } from './firebase-config.js';
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 import { doc, setDoc, getDoc, collection, addDoc, getDocs, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
 import { coachDash, coachAtt, coachSkills, coachNotes, coachSched, coachMsgs, coachProfile, library, skillDetail, lessonPlans } from './views-coach.js';
 import { dirHome, dirSched, dirAthletes, dirCoaches, dirTimecards, dirMsgs, dirBilling, dirSubs, dirInjuries } from './views-director.js';
 import { parentHome, parentSkills, parentTuition, parentMsgs } from './views-parent.js';
@@ -560,6 +577,10 @@ function showApp(){
   hide('loadingScreen');hide('authScreen');hide('obScreen');hide('pwScreen');
   $('appShell').style.display='flex';
   initApp();
+  // Prompt password change on first login
+  if(APP.profile?.firstLogin){
+    setTimeout(()=>K.openModal('changePwModal'),800);
+  }
 }
 
 // ─── ONBOARDING ───
@@ -772,21 +793,25 @@ async signIn(){
 async signUp(){
   const btn=$('upBtn'),err=$('upErr');
   err.style.display='none';
-  const name=val('upName').trim(),email=val('upEmail').trim(),pass=val('upPass'),code=val('upCode').trim().toUpperCase(),role=suRole||'director';
+  const name=val('upName').trim(),email=val('upEmail').trim(),pass=val('upPass'),role=suRole||'director';
   if(!name||!email||!pass){err.textContent='Please fill in all fields.';err.style.display='block';return;}
   if(pass.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return;}
-  if((role==='coach'||role==='parent')&&!code){err.textContent='Coaches and parents need an invite code from their director.';err.style.display='block';return;}
   btn.disabled=true;btn.textContent='Creating account...';
   try{
-    let gymId=null,inviteId=null,inviteData={};
-    if(code){
-      const snap=await getDocs(query(collection(db,'invites'),where('code','==',code),where('status','==','pending')));
-      if(snap.empty){err.textContent='Invalid or already used invite code. Ask your director.';err.style.display='block';btn.disabled=false;btn.textContent='Create Account →';return;}
-      inviteId=snap.docs[0].id;inviteData=snap.docs[0].data();gymId=inviteData.gymId||null;
+    let gymId=null,belt='Foundation',gymName='';
+    // Auto-link parent by matching email in athletes collection
+    if(role==='parent'){
+      const athSnap=await getDocs(query(collection(db,'athletes'),where('parentEmail','==',email)));
+      if(!athSnap.empty){gymId=athSnap.docs[0].data().gymId||null;gymName=athSnap.docs[0].data().gymName||'';}
+    }
+    // Auto-link coach by matching email in invites (director pre-registered them)
+    if(role==='coach'){
+      const invSnap=await getDocs(query(collection(db,'invites'),where('email','==',email),where('status','==','pending')));
+      if(!invSnap.empty){const d=invSnap.docs[0].data();gymId=d.gymId||null;belt=d.belt||'Foundation';gymName=d.gymName||'';
+        await setDoc(doc(db,'invites',invSnap.docs[0].id),{status:'used',usedAt:new Date().toISOString()},{merge:true});}
     }
     const cred=await createUserWithEmailAndPassword(auth,email,pass);
-    await setDoc(doc(db,'users',cred.user.uid),{name,email,role,belt:inviteData.belt||'Foundation',certifications:[],gymId,gymName:inviteData.gymName||'',createdAt:new Date().toISOString()});
-    if(inviteId)await setDoc(doc(db,'invites',inviteId),{status:'used',usedAt:new Date().toISOString()},{merge:true});
+    await setDoc(doc(db,'users',cred.user.uid),{name,email,role,belt,certifications:[],gymId,gymName,firstLogin:true,createdAt:new Date().toISOString()});
     toast('✓ Welcome to KINETIC!');
   }catch(e){err.textContent=e.code==='auth/email-already-in-use'?'An account with this email already exists.':e.message;err.style.display='block';btn.disabled=false;btn.textContent='Create Account →';}
 },
@@ -863,7 +888,9 @@ openModal(id, data={}){
         sval('msg_body',`Hi! This is a friendly reminder that ${fn}'s tuition of $${data.ath.tuitionAmount||185}/month is ${data.ath.tuitionStatus==='overdue'?'overdue':'coming up'}. Please reach out if you have any questions. Thank you!`);
       } else {sval('msg_sub','');sval('msg_body','');}
     } else if(role==='coach'){
-      sel.innerHTML=`<option value="director">Director</option>`;
+      // Include parents from their classes
+      const parentOpts=data.parentOpts?decodeURIComponent(data.parentOpts):'';
+      sel.innerHTML=`<option value="director">Director</option>${parentOpts}`;
       sval('msg_sub','');sval('msg_body','');
     } else {
       sel.innerHTML=`<option value="director">Director</option><option value="coaches">My Coach</option>`;
@@ -929,6 +956,9 @@ openModal(id, data={}){
     $('sub_cls').innerHTML=my.length?my.map(c=>`<option value="${c.id}">${c.name} — ${c.day} ${c.time}</option>`).join(''):`<option>No classes assigned</option>`;
   }
   if(id==='lpModal'){$('lpTitle').textContent=data.title?`${data.level} — Week ${data.week}: ${data.title}`:`Week ${data.week}`;}
+  if(id==='changePwModal'){
+    $('cpErr').style.display='none';sval('cpNew','');sval('cpConf','');
+  }
   $(id).classList.add('open');
 },
 
@@ -1003,11 +1033,11 @@ clockIn(){
   const my=APP.allClasses.filter(c=>(c.coaches||[]).includes(APP.user?.uid)||c.coachId===APP.user?.uid);
   if(my.length===0){K.doClockIn(null);return;}
   if(my.length===1){K.doClockIn(my[0]);return;}
-  // Show class picker inline
+  // Show class picker inline — use data-id, no arrow fn in onclick attr
   $('mc').innerHTML=`
     <h2 style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:24px;margin-bottom:6px;">Which class are you teaching?</h2>
     <p style="font-size:14px;color:var(--t2);margin-bottom:24px;">Select your class to begin tracking.</p>
-    ${my.map(c=>`<div onclick="K.doClockIn(APP.allClasses.find(x=>x.id==='${c.id}'))"
+    ${my.map(c=>`<div data-classid="${c.id}" onclick="K.clockInClass(this.dataset.classid)"
       style="background:var(--panel);border:2px solid var(--bdr);border-radius:10px;padding:18px 22px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:16px;transition:all 0.15s;"
       onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--bdr)'">
       <div style="font-size:32px;">🥋</div>
@@ -1017,6 +1047,7 @@ clockIn(){
       <div style="font-size:22px;color:var(--gold);">→</div>
     </div>`).join('')}`;
 },
+clockInClass(id){ const cls=APP.allClasses.find(c=>c.id===id); K.doClockIn(cls||null); },
 async doClockIn(cls){
   APP.clockedIn=true;APP.clockInTime=new Date();
   APP.clockSessionId='tc_'+APP.user.uid+'_'+Date.now();
@@ -1105,13 +1136,24 @@ async saveNewAthlete(){
     const code=Math.random().toString(36).substr(2,6).toUpperCase();
     await addDoc(collection(db,'invites'),{email:parentEmail,name:data.parentName||'Parent',role:'parent',code,athleteId:ref.id,athleteName:name,gymId:APP.gymId||null,gymName:APP.gymProfile?.name||'',createdBy:APP.user?.uid,createdAt:new Date().toISOString(),status:'pending'});
     APP.allAthletes.push({id:ref.id,...data});
+    // Auto-create parent account with default password 'Kinetic1!'
+    let parentCreated=false;
+    try{
+      const FIREBASE_CONFIG={apiKey:"AIzaSyCmG-MfINmp1rMQOsXGNmRkBxJROSdqyqk",authDomain:"kinetic-a4862.firebaseapp.com",projectId:"kinetic-a4862",storageBucket:"kinetic-a4862.firebasestorage.app",messagingSenderId:"924145283660",appId:"1:924145283660:web:f1135f7000d9e4897f7ae9"};
+      const sec=initializeApp(FIREBASE_CONFIG,'parent_'+Date.now());
+      const secAuth=(await import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js")).getAuth(sec);
+      const parentName=val('af_parentName')||'Parent';
+      const cred=await createUserWithEmailAndPassword(secAuth,parentEmail,'Kinetic1!');
+      await setDoc(doc(db,'users',cred.user.uid),{name:parentName,email:parentEmail,role:'parent',belt:'',certifications:[],gymId:APP.gymId||null,gymName:APP.gymProfile?.name||'',athleteIds:[ref.id],firstLogin:true,createdAt:new Date().toISOString()});
+      await (await import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js")).signOut(secAuth);
+      deleteApp(sec);
+      parentCreated=true;
+    }catch(e){
+      // Account may already exist — that's fine
+      if(e.code!=='auth/email-already-in-use') console.warn('Parent account:',e.message);
+    }
     K.closeModal('addAthModal');
-    // Show code in a clear alert — don't just toast it
-    setTimeout(()=>{
-      if(confirm(`✓ ${name} added!\n\nParent Invite Code:\n\n${code}\n\nShare this code with the parent. Click OK to copy it.`)){
-        navigator.clipboard.writeText(code).catch(()=>{});
-      }
-    },100);
+    toast(`✓ ${name} added!${parentCreated?' Parent account created — password: Kinetic1!':' (Parent already has account)'}`);
     render();
   }catch(e){toast('⚠️ '+e.message,'warn');}
 },
@@ -1163,8 +1205,32 @@ async generateInvite(){
   const code=Math.random().toString(36).substr(2,6).toUpperCase();
   try{
     await addDoc(collection(db,'invites'),{email,name,role:type,belt:type==='coach'?belt:null,code,gymId:APP.gymId||null,gymName:APP.gymProfile?.name||'',createdBy:APP.user?.uid,createdAt:new Date().toISOString(),status:'pending'});
-    $('invCode').textContent=code;$('invResult').style.display='block';$('invActions').style.display='none';$('invDone').style.display='block';
-    toast(`✓ Invite code for ${name}: ${code}`);
+    // Auto-create the account so they just sign in — no code needed
+    const defaultPass=type==='coach'?'CoachKinetic1!':'Kinetic1!';
+    let autoCreated=false;
+    try{
+      const FIREBASE_CONFIG={apiKey:"AIzaSyCmG-MfINmp1rMQOsXGNmRkBxJROSdqyqk",authDomain:"kinetic-a4862.firebaseapp.com",projectId:"kinetic-a4862",storageBucket:"kinetic-a4862.firebasestorage.app",messagingSenderId:"924145283660",appId:"1:924145283660:web:f1135f7000d9e4897f7ae9"};
+      const sec=initializeApp(FIREBASE_CONFIG,'coach_'+Date.now());
+      const secAuth=(await import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js")).getAuth(sec);
+      const cred=await createUserWithEmailAndPassword(secAuth,email,defaultPass);
+      await setDoc(doc(db,'users',cred.user.uid),{name,email,role:type,belt,certifications:[],gymId:APP.gymId||null,gymName:APP.gymProfile?.name||'',firstLogin:true,createdAt:new Date().toISOString()});
+      await (await import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js")).signOut(secAuth);
+      deleteApp(sec);
+      autoCreated=true;
+    }catch(e){if(e.code!=='auth/email-already-in-use') console.warn('Coach account:',e.message);}
+    const msg=autoCreated?`Account created! Tell ${name} to sign in with:\nEmail: ${email}\nPassword: ${defaultPass}\n(They'll be asked to change it on first login)`:email+' already has an account and will be auto-linked.';
+    $('invCode').textContent=autoCreated?defaultPass:email;
+    $('invResult').style.display='block';$('invActions').style.display='none';$('invDone').style.display='block';
+    // Update the result UI to show credentials
+    const rc=document.getElementById('invCode').parentElement;
+    if(rc){rc.innerHTML=`<div style="font-size:12px;color:var(--green);margin-bottom:8px;">✓ Account ${autoCreated?'Created':'Found'}!</div>
+      <div style="margin-bottom:6px;"><div style="font-size:11px;color:var(--t3);margin-bottom:2px;">EMAIL</div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px;">${email}</div></div>
+      ${autoCreated?`<div style="margin-bottom:6px;"><div style="font-size:11px;color:var(--t3);margin-bottom:2px;">TEMPORARY PASSWORD</div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;letter-spacing:3px;">${defaultPass}</div></div>`:''}
+      <div style="font-size:11px;color:var(--t3);margin-top:6px;">${autoCreated?'Share these credentials. They will be asked to change password on first login.':'This person already has an account and will be auto-linked.'}</div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn" style="flex:1;" onclick="navigator.clipboard.writeText('Email: ${email}\nPassword: ${defaultPass}').then(()=>window.toast('✓ Copied!'))">Copy Info</button>
+        <button class="btn" style="flex:1;" onclick="K.resetInvite()">+ Add Another</button>
+      </div>`;}
   }catch(e){toast('⚠️ '+e.message,'warn');}
 },
 
@@ -1249,7 +1315,7 @@ async saveCharge(){
 async approveSubReq(id){
   try{
     await setDoc(doc(db,'subRequests',id),{status:'open'},{merge:true});
-    const r=APP.subRequests?.find(s=>s.id===id);if(r)r.status='open';
+    APP.subRequests=(APP.subRequests||[]).map(r=>r.id===id?{...r,status:'open'}:r);
     toast('✓ Posted to Sub Board — coaches can now claim it');render();
   }catch(e){toast('⚠️ '+e.message,'warn');}
 },
@@ -1270,6 +1336,7 @@ async approveSubClaim(id){
   try{
     const r=APP.subRequests?.find(s=>s.id===id);if(!r)return;
     await setDoc(doc(db,'subRequests',id),{status:'awaiting_original'},{merge:true});
+    APP.subRequests=(APP.subRequests||[]).map(s=>s.id===id?{...s,status:'awaiting_original'}:s);
     r.status='awaiting_original';
     // Send message to original coach
     const msgData={
@@ -1340,6 +1407,23 @@ async sendTuitionReminder(athId){
   // Pre-fill a new message to the parent
   APP._reminderAth=ath;
   K.openModal('newMsgModal',{role:'director',reminder:true,ath});
+},
+
+async changePassword(){
+  const np=val('cpNew'),cf=val('cpConf'),err=$('cpErr');
+  err.style.display='none';
+  if(np.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return;}
+  if(np!==cf){err.textContent='Passwords do not match.';err.style.display='block';return;}
+  try{
+    await updatePassword(auth.currentUser,np);
+    await setDoc(doc(db,'users',APP.user.uid),{firstLogin:false},{merge:true});
+    APP.profile.firstLogin=false;
+    K.closeModal('changePwModal');toast('✓ Password updated!');
+  }catch(e){
+    if(e.code==='auth/requires-recent-login'){
+      err.textContent='Please sign out and sign back in before changing your password.';err.style.display='block';
+    } else {err.textContent=e.message;err.style.display='block';}
+  }
 },
 
 async denySubFinal(subReqId){

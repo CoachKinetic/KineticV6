@@ -186,19 +186,43 @@ export function coachSched(){
 }
 
 export function coachMsgs(){
-  const msgs=(APP.messages||[]).filter(m=>m.toId===APP.user?.uid||m.toRole==='coaches'||m.fromId===APP.user?.uid);
-  // Sub confirmation requests need prominent action banners
-  const subConfirms=msgs.filter(m=>m.type==='sub_confirm_request'&&!m.read);
-  const confirmBanner=subConfirms.length?`<div style="margin-bottom:12px;">${subConfirms.map(m=>`
+  const uid=APP.user?.uid;
+  const all=(APP.messages||[]).filter(m=>m.toId===uid||m.toRole==='coaches'||m.fromId===uid);
+  const tab=APP.msgTab||'unread';
+
+  // Sub confirm banners — always show at top regardless of tab
+  const subConfirms=all.filter(m=>m.type==='sub_confirm_request'&&!m.read&&m.toId===uid);
+  const banner=subConfirms.length?`<div style="margin-bottom:14px;">${subConfirms.map(m=>`
     <div class="alert warn" style="display:block;border-left:3px solid var(--gold);">
-      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;margin-bottom:6px;">🔔 Sub Request — Action Required</div>
+      <div style="font-weight:800;font-size:13px;margin-bottom:6px;">🔔 Sub Request — Your Approval Needed</div>
       <div style="font-size:13px;margin-bottom:12px;">${m.body?.split('\n')[0]||m.subject}</div>
       <div style="display:flex;gap:8px;">
-        <button class="btn primary" style="flex:1;" onclick="window.K.confirmSubFromCoach('${m.subRequestId||''}')">✓ Yes — Approve This Sub</button>
+        <button class="btn primary" style="flex:1;" onclick="window.K.confirmSubFromCoach('${m.subRequestId||''}')">✓ Yes — Approve</button>
         <button class="btn danger" style="flex:1;" onclick="window.K.denySubFinal('${m.subRequestId||''}')">Deny</button>
       </div>
     </div>`).join('')}</div>`:'';
-  return confirmBanner + msgInbox(msgs,'coach');
+
+  // Build parent list from my classes
+  const myClasses=APP.allClasses.filter(c=>(c.coaches||[]).includes(uid)||c.coachId===uid);
+  const myAthletes=APP.allAthletes.filter(a=>myClasses.some(c=>(c.athletes||[]).includes(a.id)));
+  const parentOpts=myAthletes.map(a=>`<option value="parent_${a.id}">${a.name.split(' ')[0]}'s Parent (${a.name})</option>`).join('');
+
+  const inbox=all.filter(m=>!m.read&&m.fromId!==uid&&m.fromId!=='system');
+  const read=all.filter(m=>(m.read||m.fromId===uid)&&m.fromId!=='system');
+  const sent=all.filter(m=>m.fromId===uid);
+  const display=tab==='sent'?sent:tab==='read'?read:inbox;
+
+  const tabs=`<div style="display:flex;gap:0;margin-bottom:12px;border:1px solid var(--bdr);border-radius:6px;overflow:hidden;">
+    ${[['unread',`Inbox${inbox.length?` (${inbox.length})`:''}`,],['read','Read'],['sent','Sent']].map(([t,l])=>`
+    <button onclick="APP.msgTab='${t}';window.K.nav('coachMsgs')"
+      style="flex:1;padding:9px 6px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:none;border-right:1px solid var(--bdr);
+      background:${tab===t?'var(--gold)':'var(--panel)'};color:${tab===t?'var(--sb)':'var(--t2)'};">${l}</button>`).join('')}
+  </div>`;
+
+  return banner + `
+  <div class="sec-hdr"><h3>Messages</h3><button class="btn primary" onclick="window.K.openModal('newMsgModal',{role:'coach',parentOpts:'${encodeURIComponent(parentOpts)}'})">+ New Message</button></div>
+  ${tabs}
+  ${msgInbox(display,'coach')}`;
 }
 
 export function coachProfile(){
