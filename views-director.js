@@ -28,12 +28,12 @@ export function dirHome(){
     const cls=APP.allClasses.find(c=>c.id===n.classId);
     const coach=APP.allCoaches.find(c=>c.id===n.coachId)||{name:n.coachId||'Coach'};
     const ds=n.date?new Date(n.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-    return \`<div class="alert warn" style="display:block;">
+    return `<div class="alert warn" style="display:block;">
       <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
         <strong>${coach.name||'Coach'}</strong><span style="font-size:11px;color:var(--t3);">${ds} · ${cls?.name||'Class'}</span>
       </div>
       <div style="font-size:13px;">${n.issueNotes}</div>
-    </div>\`;
+    </div>`;
   }).join('')}`:''}
   ${pending>0||tcP>0||injP>0?`<div class="sec-hdr"><h3>Action Required</h3></div>
       ${pending>0?`<div class="alert warn" style="cursor:pointer;" onclick="window.K.nav('dirSubs')">🔄 <strong>${pending} sub request${pending>1?'s':''}</strong> need your approval</div>`:''}
