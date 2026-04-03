@@ -711,6 +711,35 @@ async function loadAI(){
 // ═══════════════════════════════════════════
 // KINETIC CONTROLLER — all window functions
 // ═══════════════════════════════════════════
+function buildEditClassForm(cls){
+  return `
+  <div class="mo-title">Edit Class</div>
+  <div class="fg"><label class="fl">Class Name *</label><input class="fi" id="ec_name" value="${cls.name||''}"></div>
+  <div class="g2" style="margin-bottom:0;">
+    <div class="fg"><label class="fl">Day</label><select class="fs" id="ec_day">${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=>`<option ${cls.day===d?'selected':''}>${d}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Time *</label><input class="fi" id="ec_time" value="${cls.time||''}"></div>
+  </div>
+  <div class="g2" style="margin-bottom:0;">
+    <div class="fg"><label class="fl">Level</label><select class="fs" id="ec_level">${BELT_LEVELS.map(l=>`<option ${cls.level===l?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Capacity</label><input class="fi" type="number" id="ec_cap" value="${cls.cap||8}" min="1"></div>
+  </div>
+  <div class="fg"><label class="fl">Public Notes</label><textarea class="ft" id="ec_notes" style="min-height:60px;">${cls.notes||''}</textarea></div>
+  <div class="fg"><label class="fl">Coaches Assigned</label>
+    <div style="border:1px solid var(--bdr);border-radius:4px;background:var(--bg);padding:8px;max-height:140px;overflow-y:auto;">
+      ${APP.allCoaches.length===0?'<div style="font-size:12px;color:var(--t3);padding:4px;">No coaches in your gym yet.</div>'
+      :APP.allCoaches.map(c=>`<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;">
+        <input type="checkbox" name="ec_coach" value="${c.id}" style="accent-color:var(--gold);" ${(cls.coaches||[]).includes(c.id)?'checked':''}>
+        <div class="mini-av" style="width:22px;height:22px;font-size:9px;">${ini(c.name)}</div>
+        <span style="font-size:13px;">${c.name} <span style="color:var(--t3);">${c.belt||'Foundation'}</span></span>
+      </label>`).join('')}
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button class="btn" style="flex:1;" onclick="K.closeModal('editClassModal')">Cancel</button>
+    <button class="btn primary" style="flex:1;" onclick="K.saveEditClass('${cls.id}')">Save Changes →</button>
+  </div>\`;
+}
+
 const K = window.K = {
 
 nav(v){ APP.view=v; renderNav(); render(); },
@@ -1026,37 +1055,7 @@ async coFinish(){
   renderNav();toast('✓ Clocked Out — Session saved');APP.view='coachDash';render();
 },
 
-// ─── DIRECTOR ACTIONS ───
-function buildEditClassForm(cls){
-  return `
-  <div class="mo-title">Edit Class</div>
-  <div class="fg"><label class="fl">Class Name *</label><input class="fi" id="ec_name" value="${cls.name||''}"></div>
-  <div class="g2" style="margin-bottom:0;">
-    <div class="fg"><label class="fl">Day</label><select class="fs" id="ec_day">${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=>`<option ${cls.day===d?'selected':''}>${d}</option>`).join('')}</select></div>
-    <div class="fg"><label class="fl">Time *</label><input class="fi" id="ec_time" value="${cls.time||''}"></div>
-  </div>
-  <div class="g2" style="margin-bottom:0;">
-    <div class="fg"><label class="fl">Level</label><select class="fs" id="ec_level">${BELT_LEVELS.map(l=>`<option ${cls.level===l?'selected':''}>${l}</option>`).join('')}</select></div>
-    <div class="fg"><label class="fl">Capacity</label><input class="fi" type="number" id="ec_cap" value="${cls.cap||8}" min="1"></div>
-  </div>
-  <div class="fg"><label class="fl">Public Notes</label><textarea class="ft" id="ec_notes" style="min-height:60px;">${cls.notes||''}</textarea></div>
-  <div class="fg"><label class="fl">Coaches Assigned</label>
-    <div style="border:1px solid var(--bdr);border-radius:4px;background:var(--bg);padding:8px;max-height:140px;overflow-y:auto;">
-      ${APP.allCoaches.length===0?'<div style="font-size:12px;color:var(--t3);padding:4px;">No coaches in your gym yet.</div>'
-      :APP.allCoaches.map(c=>`<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;">
-        <input type="checkbox" name="ec_coach" value="${c.id}" style="accent-color:var(--gold);" ${(cls.coaches||[]).includes(c.id)?'checked':''}>
-        <div class="mini-av" style="width:22px;height:22px;font-size:9px;">${ini(c.name)}</div>
-        <span style="font-size:13px;">${c.name} <span style="color:var(--t3);">${c.belt||'Foundation'}</span></span>
-      </label>`).join('')}
-    </div>
-  </div>
-  <div style="display:flex;gap:8px;">
-    <button class="btn" style="flex:1;" onclick="K.closeModal('editClassModal')">Cancel</button>
-    <button class="btn primary" style="flex:1;" onclick="K.saveEditClass('${cls.id}')">Save Changes →</button>
-  </div>`;
-}
-
-async saveEditClass(id){
+saveEditClass:async function(id){
   const name=val('ec_name').trim(),day=val('ec_day'),time=val('ec_time').trim();
   const level=val('ec_level')||'Level 1',cap=+val('ec_cap')||8,notes=val('ec_notes').trim();
   const selectedCoaches=[...document.querySelectorAll('input[name="ec_coach"]:checked')].map(c=>c.value);
