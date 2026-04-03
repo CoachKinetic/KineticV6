@@ -816,6 +816,10 @@ openModal(id, data={}){
     if(data.role==='coach')msgs=msgs.filter(m=>m.toId===APP.user?.uid||m.toRole==='coaches'||m.fromId===APP.user?.uid);
     if(data.role==='parent')msgs=msgs.filter(m=>m.toId===APP.user?.uid||m.toRole==='parents'||m.fromId===APP.user?.uid);
     const m=msgs[data.idx];if(!m)return;
+    // Figure out who to reply to
+    // If I sent it, reply goes to recipient. If they sent it, reply goes to them.
+    const replyToId = m.fromId===APP.user?.uid ? (m.toId||null) : m.fromId;
+    const replyToName = m.fromId===APP.user?.uid ? 'Them' : (m.from||'Unknown');
     $('msgViewContent').innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
         <div><div style="font-size:13px;font-weight:700;">${m.from||'Unknown'} <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;text-transform:uppercase;color:var(--gold);">${m.fromRole||''}</span></div>
@@ -826,7 +830,7 @@ openModal(id, data={}){
       <div style="font-size:14px;color:var(--t2);line-height:1.7;padding:16px 0;border-top:1px solid var(--bdr);">${m.body||m.preview||''}</div>
       <div style="margin-top:16px;"><label class="fl">Reply</label>
         <textarea class="ft" id="replyBody" placeholder="Write a reply..." style="min-height:80px;"></textarea>
-        <button class="btn primary full" style="margin-top:8px;" onclick="K.sendReply('${m.fromId||''}','${m.from||''}','Re: ${(m.subject||'').replace(/'/g,"\\'")}')">Send Reply →</button>
+        <button class="btn primary full" style="margin-top:8px;" onclick="K.sendReply('${replyToId||''}','${replyToName}','Re: ${(m.subject||'').replace(/'/g,"\\'")}')">Send Reply →</button>
       </div>`;
   }
   if(id==='editTuitionModal'){
@@ -1098,9 +1102,17 @@ async approveTC(id){
 async sendMsg(){
   const to=val('msg_to'),subject=val('msg_sub').trim()||'Message',body=val('msg_body').trim();
   if(!body){toast('Please write a message','warn');return;}
-  const isCoach=to&&!['coaches','parents','director'].includes(to);
+  // 'coaches','parents','director' = broadcast toRole. Specific uid = direct message toId.
+  const isBroadcast=['coaches','parents','director'].includes(to);
   try{
-    const data={from:APP.profile?.name||'Director',fromId:APP.user?.uid,fromRole:APP.role,toId:isCoach?to:null,toRole:isCoach?null:to,subject,body,preview:body.slice(0,80),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()};
+    const data={
+      from:APP.profile?.name||'User',fromId:APP.user?.uid,fromRole:APP.role,
+      toId:isBroadcast?null:to,
+      toRole:isBroadcast?to:null,
+      subject,body,preview:body.slice(0,80),
+      time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),
+      read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()
+    };
     await addDoc(collection(db,'messages'),data);
     APP.messages=[data,...APP.messages];
     K.closeModal('newMsgModal');toast('✓ Message sent!');render();
@@ -1110,8 +1122,12 @@ async sendMsg(){
 async sendReply(toId,toName,subject){
   const body=val('replyBody').trim();
   if(!body){toast('Please write a reply','warn');return;}
+  // Figure out toRole based on who we're replying to
+  const toCoach=APP.allCoaches?.find(c=>c.id===toId);
+  const toDir=toId&&!toCoach; // if not a coach uid, assume director
+  const toRole=toCoach?null:(toId?null:'director');
   try{
-    const data={from:APP.profile?.name||'User',fromId:APP.user?.uid,fromRole:APP.role,toId:toId||null,toRole:null,subject,body,preview:body.slice(0,80),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()};
+    const data={from:APP.profile?.name||'User',fromId:APP.user?.uid,fromRole:APP.role,toId:toId||null,toRole,subject,body,preview:body.slice(0,80),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()};
     await addDoc(collection(db,'messages'),data);
     APP.messages=[data,...APP.messages];
     K.closeModal('msgViewModal');toast('✓ Reply sent!');render();
@@ -1163,6 +1179,31 @@ async resolveInjury(id){
 async saveClassNotes(id){
   const notes=$(`cls_notes_${id}`)?.value||'';
   try{await setDoc(doc(db,'classes',id),{notes},{merge:true});const cls=APP.allClasses.find(c=>c.id===id);if(cls)cls.notes=notes;toast('✓ Notes saved!');}catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async addCoachToClass(classId, coachId){
+  if(!coachId){toast('Select a coach first','warn');return;}
+  try{
+    const cls=APP.allClasses.find(c=>c.id===classId);if(!cls)return;
+    const coaches=[...new Set([...(cls.coaches||[]),coachId])];
+    const coachObj=APP.allCoaches.find(c=>c.id===coachId);
+    const coachName=coaches.length===1?(coachObj?.name||'TBD'):`${coachObj?.name} + ${coaches.length-1} more`;
+    await setDoc(doc(db,'classes',classId),{coaches,coachId:coaches[0],coachName},{merge:true});
+    cls.coaches=coaches;cls.coachId=coaches[0];cls.coachName=coachName;
+    toast(`✓ ${coachObj?.name||'Coach'} added to class`);K.openModal('classModal',{classId});
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async removeCoachFromClass(classId, coachId){
+  try{
+    const cls=APP.allClasses.find(c=>c.id===classId);if(!cls)return;
+    const coaches=(cls.coaches||[]).filter(id=>id!==coachId);
+    const coachObj=APP.allCoaches.find(c=>c.id===coaches[0]);
+    const coachName=coachObj?.name||'TBD';
+    await setDoc(doc(db,'classes',classId),{coaches,coachId:coaches[0]||null,coachName},{merge:true});
+    cls.coaches=coaches;cls.coachId=coaches[0]||null;cls.coachName=coachName||'TBD';
+    toast('✓ Coach removed');K.openModal('classModal',{classId});
+  }catch(e){toast('⚠️ '+e.message,'warn');}
 },
 async addAthToClass(classId,athId){
   try{const cls=APP.allClasses.find(c=>c.id===classId);if(!cls)return;if(!(cls.athletes||[]).includes(athId)){cls.athletes=[...(cls.athletes||[]),athId];}await setDoc(doc(db,'classes',classId),{athletes:cls.athletes},{merge:true});toast('✓ Athlete added');K.openModal('classModal',{classId});}catch(e){toast('⚠️ '+e.message,'warn');}
@@ -1244,11 +1285,27 @@ function buildAthDetail(ath){
 function buildClassDetail(cls){
   const inClass=APP.allAthletes.filter(a=>(cls.athletes||[]).includes(a.id));
   const notIn=APP.allAthletes.filter(a=>!(cls.athletes||[]).includes(a.id));
+  const assignedCoaches=APP.allCoaches.filter(c=>(cls.coaches||[]).includes(c.id));
+  const unassignedCoaches=APP.allCoaches.filter(c=>!(cls.coaches||[]).includes(c.id));
   return `
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
     <div><h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;">${cls.name}</h3>
-    <div style="font-size:13px;color:var(--t2);margin-top:4px;">📅 ${cls.day} · ${cls.time} · 🧑‍🏫 ${cls.coachName||'TBD'} · ${cls.level}</div></div>
+    <div style="font-size:13px;color:var(--t2);margin-top:4px;">📅 ${cls.day} · ${cls.time} · ${cls.level}</div></div>
     <button class="btn" onclick="K.closeModal('classModal')">✕</button>
+  </div>
+  <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Coaches Assigned</div>
+  <div style="border:1px solid var(--bdr);border-radius:6px;margin-bottom:16px;overflow:hidden;">
+    ${assignedCoaches.length===0
+      ?`<div style="padding:12px 14px;font-size:13px;color:var(--t3);">No coaches assigned yet.</div>`
+      :assignedCoaches.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--bdr2);">
+          <div class="mini-av">${ini(c.name)}</div>
+          <div style="flex:1;"><div style="font-size:13px;font-weight:600;">${c.name}</div><div style="font-size:11px;color:var(--t3);">${c.belt||'Foundation'}</div></div>
+          <button class="btn danger" style="font-size:10px;padding:4px 8px;" onclick="K.removeCoachFromClass('${cls.id}','${c.id}')">Remove</button>
+        </div>`).join('')}
+    ${unassignedCoaches.length>0?`<div style="padding:10px 14px;background:var(--bg);border-top:1px solid var(--bdr);display:flex;align-items:center;gap:8px;">
+      <select class="fs" id="addCoachSel_${cls.id}" style="flex:1;"><option value="">+ Add a coach...</option>${unassignedCoaches.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select>
+      <button class="btn primary" style="white-space:nowrap;" onclick="K.addCoachToClass('${cls.id}',document.getElementById('addCoachSel_${cls.id}').value)">Add →</button>
+    </div>`:''}
   </div>
   <div class="fg"><label class="fl">Public Notes (visible to parents)</label>
     <textarea class="ft" id="cls_notes_${cls.id}" style="min-height:60px;">${cls.notes||''}</textarea>
