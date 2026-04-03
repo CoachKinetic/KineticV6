@@ -1105,7 +1105,14 @@ async saveNewAthlete(){
     const code=Math.random().toString(36).substr(2,6).toUpperCase();
     await addDoc(collection(db,'invites'),{email:parentEmail,name:data.parentName||'Parent',role:'parent',code,athleteId:ref.id,athleteName:name,gymId:APP.gymId||null,gymName:APP.gymProfile?.name||'',createdBy:APP.user?.uid,createdAt:new Date().toISOString(),status:'pending'});
     APP.allAthletes.push({id:ref.id,...data});
-    K.closeModal('addAthModal');toast(`✓ ${name} added! Parent invite: ${code}`);render();
+    K.closeModal('addAthModal');
+    // Show code in a clear alert — don't just toast it
+    setTimeout(()=>{
+      if(confirm(`✓ ${name} added!\n\nParent Invite Code:\n\n${code}\n\nShare this code with the parent. Click OK to copy it.`)){
+        navigator.clipboard.writeText(code).catch(()=>{});
+      }
+    },100);
+    render();
   }catch(e){toast('⚠️ '+e.message,'warn');}
 },
 
@@ -1285,18 +1292,34 @@ Reply YES to confirm.`,
 async confirmSubFromCoach(subReqId){
   // Original coach says YES — finalize and notify everyone
   try{
-    const r=APP.subRequests?.find(s=>s.id===subReqId);if(!r)return;
+    const r=APP.subRequests?.find(s=>s.id===subReqId);if(!r){toast('Sub request not found','warn');return;}
     await setDoc(doc(db,'subRequests',subReqId),{status:'confirmed'},{merge:true});
     r.status='confirmed';
     const announcement=`${r.subCoachName} is subbing ${r.className} on ${r.date}.`;
-    // Notify original coach
-    const m1={from:'KINETIC',fromId:'system',fromRole:'system',toId:r.requestedBy,toRole:null,subject:`Confirmed: Sub for ${r.className}`,body:announcement,preview:announcement,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()};
-    // Notify sub coach
-    const m2={...m1,toId:r.subCoachId,subject:`You're confirmed: ${r.className} on ${r.date}`};
-    // Notify director (broadcast)
-    const m3={...m1,toId:null,toRole:'director',subject:`Sub Confirmed: ${r.className} on ${r.date}`};
+    const tid=Date.now().toString(36);
+    const baseMsg={from:'KINETIC',fromId:'system',fromRole:'system',threadId:tid,
+      time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),
+      read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString(),
+      body:announcement,preview:announcement};
+    const m1={...baseMsg,toId:r.requestedBy,toRole:null,subject:`Confirmed: Sub for ${r.className}`};
+    const m2={...baseMsg,toId:r.subCoachId,toRole:null,subject:`You're confirmed: ${r.className} on ${r.date}`};
+    const m3={...baseMsg,toId:null,toRole:'director',subject:`Sub Confirmed: ${r.className} on ${r.date}`};
     await Promise.all([addDoc(collection(db,'messages'),m1),addDoc(collection(db,'messages'),m2),addDoc(collection(db,'messages'),m3)]);
-    toast(`✓ Confirmed! ${r.subCoachName} is subbing. All parties notified.`);render();
+    APP.messages=[m3,m2,m1,...APP.messages];
+    // Add sub coach to class coaches array so it shows on their schedule
+    const cls=APP.allClasses.find(c=>c.id===r.classId);
+    if(cls&&r.subCoachId){
+      const updCoaches=[...new Set([...(cls.coaches||[]),r.subCoachId])];
+      const subNote=`SUB: ${r.subCoachName} covering on ${r.date}`;
+      const origNote=(cls.subNotes||[]); origNote.push(subNote);
+      await setDoc(doc(db,'classes',r.classId),{
+        coaches:updCoaches,
+        subNotes:origNote,
+        subInfo:{subCoachId:r.subCoachId,subCoachName:r.subCoachName,date:r.date}
+      },{merge:true});
+      cls.coaches=updCoaches;cls.subNotes=origNote;cls.subInfo={subCoachId:r.subCoachId,subCoachName:r.subCoachName,date:r.date};
+    }
+    toast(`✓ Confirmed! ${r.subCoachName} is subbing. All 3 parties notified.`);render();
   }catch(e){toast('⚠️ '+e.message,'warn');}
 },
 async confirmSub(id){
@@ -1319,6 +1342,14 @@ async sendTuitionReminder(athId){
   K.openModal('newMsgModal',{role:'director',reminder:true,ath});
 },
 
+async denySubFinal(subReqId){
+  try{
+    if(!subReqId)return;
+    await setDoc(doc(db,'subRequests',subReqId),{status:'denied'},{merge:true});
+    APP.subRequests=APP.subRequests.filter(s=>s.id!==subReqId);
+    toast('Sub request denied');render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
 async resolveInjury(id){
   try{await setDoc(doc(db,'injuries',id),{status:'resolved'},{merge:true});const inj=APP.allInjuries?.find(i=>i.id===id);if(inj)inj.status='resolved';toast('✓ Resolved');render();}catch(e){}
 },

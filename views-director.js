@@ -313,35 +313,45 @@ export function dirInjuries(){
 }
 
 function msgInbox(allMsgs, role){
-  // Deduplicate by threadId — keep latest message per thread
+  // Group into threads. threadId > shared subject root > individual message
+  const stripRe=s=>(s||'').replace(/^(Re:\s*)+/i,'').trim().toLowerCase();
   const threads={};
   allMsgs.forEach((m,i)=>{
-    const tid=m.threadId||m.id||i;
-    if(!threads[tid]||new Date(m.createdAt)>new Date(threads[tid].msg.createdAt)){
-      threads[tid]={msg:m,idx:i,tid};
+    // Use explicit threadId, or normalize subject as thread key
+    const tid=m.threadId||(m.subRequestId?'sub_'+m.subRequestId:null)||stripRe(m.subject)||m.id||String(i);
+    if(!threads[tid]){threads[tid]={msgs:[],tid,latestIdx:i,latestCreated:m.createdAt||''};}
+    threads[tid].msgs.push({msg:m,idx:i});
+    if(new Date(m.createdAt||0)>new Date(threads[tid].latestCreated||0)){
+      threads[tid].latestIdx=i;threads[tid].latestCreated=m.createdAt||'';
     }
   });
-  const threadList=Object.values(threads).sort((a,b)=>new Date(b.msg.createdAt)-new Date(a.msg.createdAt));
-  const unread=threadList.filter(t=>!t.msg.read&&t.msg.fromId!==APP.user?.uid);
-  const read=threadList.filter(t=>t.msg.read||t.msg.fromId===APP.user?.uid);
+  // Each thread shows its latest message, count of replies
+  const threadList=Object.values(threads).map(t=>{
+    const latest=t.msgs.find(x=>x.idx===t.latestIdx)||t.msgs[t.msgs.length-1];
+    return {msg:latest.msg,idx:latest.idx,tid:t.tid,count:t.msgs.length,
+      hasUnread:t.msgs.some(x=>!x.msg.read&&x.msg.fromId!==APP.user?.uid)};
+  }).sort((a,b)=>new Date(b.msg.createdAt||0)-new Date(a.msg.createdAt||0));
+  const unread=threadList.filter(t=>t.hasUnread);
+  const read=threadList.filter(t=>!t.hasUnread);
   const renderRow=(t)=>{
     const m=t.msg,i=t.idx;
     const isMine=m.fromId===APP.user?.uid;
-    const isUnread=!m.read&&!isMine;
+    const isUnread=t.hasUnread;
     const preview=isMine?`You: ${m.preview||m.body||''}`:m.preview||m.body||'';
-    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--bdr2);cursor:pointer;${isMine?'':''}${isUnread?'background:rgba(181,153,106,0.04);':''}" onclick="window.K.openModal('msgViewModal',{idx:${i},role:'${role}'})">
+    const replyBadge=t.count>1?`<span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:2px 7px;color:var(--t3);white-space:nowrap;">${t.count} msgs</span>`:'';
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--bdr2);cursor:pointer;${isUnread?'background:rgba(181,153,106,0.04);':''}" onclick="window.K.openModal('msgViewModal',{idx:${i},role:'${role}',tid:'${t.tid.replace(/'/g,'')}'})">
       <div class="mini-av" style="${isUnread?'background:linear-gradient(135deg,var(--gold),#7A5A2A);color:var(--sb);':''}">${ini(m.from||'?')}</div>
       <div style="flex:1;min-width:0;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
           <div style="font-size:13px;font-weight:${isUnread?700:500};">${isMine?`To: ${m.toRole||'them'}`:m.from||'Unknown'} <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;text-transform:uppercase;color:var(--gold);opacity:0.7;">${m.fromRole||''}</span></div>
-          <div style="font-size:11px;color:var(--t3);white-space:nowrap;margin-left:8px;">${m.time||''}</div>
+          <div style="display:flex;align-items:center;gap:6px;">${replyBadge}<span style="font-size:11px;color:var(--t3);">${m.time||''}</span></div>
         </div>
         <div style="font-size:13px;font-weight:${isUnread?600:400};margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.subject||''}</div>
         <div style="font-size:12px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${preview}</div>
       </div>
       ${isUnread?`<div style="width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0;margin-top:5px;"></div>`:''}
     </div>`;
-  };
+  }
   return `
   <div class="sec-hdr"><h3>Messages</h3>
     <button class="btn primary" onclick="window.K.openModal('newMsgModal',{role:'${role}'})">+ New Message</button>

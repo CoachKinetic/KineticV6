@@ -140,27 +140,46 @@ export function coachNotes(){
 }
 
 export function coachSched(){
-  const my=APP.allClasses.filter(c=>(c.coaches||[]).includes(APP.user?.uid)||c.coachId===APP.user?.uid);
+  const uid=APP.user?.uid;
+  const my=APP.allClasses.filter(c=>(c.coaches||[]).includes(uid)||c.coachId===uid);
   const open=(APP.subRequests||[]).filter(r=>r.status==='open');
+  const myPending=(APP.subRequests||[]).filter(r=>r.requestedBy===uid&&r.status!=='confirmed'&&r.status!=='denied');
   return `
   <div class="sec-hdr"><h3>My Schedule</h3><button class="btn primary" onclick="window.K.openModal('subReqModal')">Request a Sub</button></div>
   <div class="g2">
     <div>
       <div class="sec-hdr"><h3>My Classes</h3></div>
       ${my.length===0?`<div class="card"><div style="padding:24px;text-align:center;color:var(--t3);">No classes assigned yet.</div></div>`
-      :my.map(c=>`<div class="class-card" style="margin-bottom:10px;" onclick="window.K.openModal('rosterModal',{classId:'${c.id}'})">
-        <div style="display:flex;justify-content:space-between;"><div class="cn">${c.name}</div><span class="pill gold-p">${c.time}</span></div>
-        <div class="cm" style="margin-top:6px;"><span>📅 ${c.day}</span><span>👧 ${(c.athletes||[]).length}/${c.cap||8}</span></div>
-      </div>`).join('')}
+      :my.map(c=>{
+        const isSubbing=c.subInfo&&c.subInfo.subCoachId===uid;
+        const hasSub=c.subInfo&&c.subInfo.subCoachId&&c.subInfo.subCoachId!==uid;
+        return `<div class="class-card" style="margin-bottom:10px;${isSubbing?'border-left-color:var(--gold);':''}" onclick="window.K.openModal('rosterModal',{classId:'${c.id}'})">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div class="cn">${c.name}${isSubbing?` <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);background:rgba(181,153,106,0.15);padding:2px 6px;border-radius:10px;margin-left:4px;">SUBBING</span>`:''}${hasSub?` <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);background:rgba(42,107,42,0.1);padding:2px 6px;border-radius:10px;margin-left:4px;">COVERED</span>`:''}</div>
+            <span class="pill gold-p">${c.time}</span>
+          </div>
+          <div class="cm" style="margin-top:6px;"><span>📅 ${c.day}</span><span>👧 ${(c.athletes||[]).length}/${c.cap||8}</span></div>
+          ${hasSub?`<div style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600;">✓ ${c.subInfo.subCoachName} subbing on ${c.subInfo.date}</div>`:''}
+          ${isSubbing?`<div style="font-size:12px;color:var(--gold);margin-top:6px;font-weight:600;">📋 You're covering this class on ${c.subInfo.date}</div>`:''}
+        </div>`;
+      }).join('')}
+      ${myPending.length?`<div style="margin-top:8px;">${myPending.map(r=>`<div class="alert ${r.status==='pending'?'warn':'info'}" style="font-size:12px;">
+        <div><strong>${r.className}</strong> — ${r.date}</div>
+        <div style="margin-top:4px;">Status: <strong>${{pending:'Waiting for director',open:'Posted to board',claimed:'Director reviewing sub',awaiting_original:'Waiting for your response',confirmed:'Confirmed'}[r.status]||r.status}</strong></div>
+      </div>`).join('')}</div>`:''}
     </div>
     <div>
       <div class="sec-hdr"><h3>Open Sub Board</h3></div>
-      ${open.length===0?`<div class="card"><div style="padding:24px;text-align:center;color:var(--t3);">No open sub requests.</div></div>`
-      :open.map(r=>`<div class="class-card" style="margin-bottom:10px;">
-        <div class="cn">${r.className}</div>
-        <div class="ct">${r.date}${r.time?` · ${r.time}`:''}</div>
-        <div class="cm" style="margin-top:6px;"><span>🎓 ${r.requiredBelt||'Level 1'}+</span></div>
-        <button class="btn primary full" style="margin-top:10px;" onclick="window.K.claimSub('${r.id}')">Request to Sub →</button>
+      ${open.length===0?`<div class="card"><div style="padding:24px;text-align:center;color:var(--t3);">No open sub requests right now.</div></div>`
+      :open.filter(r=>r.requestedBy!==uid).map(r=>`<div class="class-card" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div class="cn">${r.className}</div>
+          <span class="pill gold-p">${r.time||''}</span>
+        </div>
+        <div class="cm" style="margin-top:6px;"><span>📅 ${r.date}</span><span>🎓 ${r.requiredBelt||'Level 1'}+</span></div>
+        <div style="font-size:12px;color:var(--t2);margin-top:4px;">Coach needing sub: <strong>${r.requestedByName||'Unknown'}</strong></div>
+        ${r.reason?`<div style="font-size:12px;color:var(--t3);margin-top:4px;font-style:italic;">"${r.reason}"</div>`:''}
+        <button class="btn primary full" style="margin-top:10px;" onclick="window.K.claimSub('${r.id}')">I'll Take This Class →</button>
       </div>`).join('')}
     </div>
   </div>`;
@@ -168,13 +187,17 @@ export function coachSched(){
 
 export function coachMsgs(){
   const msgs=(APP.messages||[]).filter(m=>m.toId===APP.user?.uid||m.toRole==='coaches'||m.fromId===APP.user?.uid);
-  // Check for sub confirmation requests needing action
-  const subConfirms=msgs.filter(m=>m.type==='sub_confirm_request');
-  const confirmBanner=subConfirms.length?subConfirms.map(m=>`
-    <div class="alert warn" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-      <div><strong>Sub Request:</strong> ${m.body?.split('\n')[0]||m.subject}</div>
-      <button class="btn primary" style="font-size:11px;white-space:nowrap;" onclick="window.K.confirmSubFromCoach('${m.subRequestId||''}')">✓ Yes, approve</button>
-    </div>`).join(''):'';
+  // Sub confirmation requests need prominent action banners
+  const subConfirms=msgs.filter(m=>m.type==='sub_confirm_request'&&!m.read);
+  const confirmBanner=subConfirms.length?`<div style="margin-bottom:12px;">${subConfirms.map(m=>`
+    <div class="alert warn" style="display:block;border-left:3px solid var(--gold);">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;margin-bottom:6px;">🔔 Sub Request — Action Required</div>
+      <div style="font-size:13px;margin-bottom:12px;">${m.body?.split('\n')[0]||m.subject}</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn primary" style="flex:1;" onclick="window.K.confirmSubFromCoach('${m.subRequestId||''}')">✓ Yes — Approve This Sub</button>
+        <button class="btn danger" style="flex:1;" onclick="window.K.denySubFinal('${m.subRequestId||''}')">Deny</button>
+      </div>
+    </div>`).join('')}</div>`:'';
   return confirmBanner + msgInbox(msgs,'coach');
 }
 
