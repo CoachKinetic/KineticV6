@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>KINETIC</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#F2EFE9;--p2:#F8F5F0;--panel:#FFF;--bdr:rgba(28,28,28,0.1);--bdr2:rgba(28,28,28,0.06);
+  --sb:#1C1C1C;--gold:#B5996A;--gold-l:#C8AE86;
+  --t:#1C1C1C;--t2:rgba(28,28,28,0.6);--t3:rgba(28,28,28,0.38);
+  --red:#9B3A2F;--r-soft:rgba(155,58,47,0.1);
+  --green:#2A6B2A;--g-soft:rgba(42,107,42,0.1);
+  --blue:#1E4A7C;--b-soft:rgba(30,74,124,0.1);
+  --y-soft:rgba(181,130,30,0.1);
+}
+html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color:var(--t);-webkit-font-smoothing:antialiased;overflow:hidden;}
+/* LAYERS */
+.layer{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+.dark{background:var(--sb);z-index:9000;}
+.light{background:var(--bg);z-index:8500;overflow-y:auto;align-items:flex-start;padding:40px 20px;}
+/* LOADING */
+#loadingScreen{z-index:9999;}
+.l-logo{font-family:'Montserrat',sans-serif;font-weight:900;font-size:28px;letter-spacing:8px;color:var(--gold);text-transform:uppercase;}
+.l-bar{width:200px;height:3px;background:rgba(181,153,106,0.2);border-radius:2px;overflow:hidden;margin-top:20px;}
+.l-fill{height:100%;background:var(--gold);animation:lf 1.5s ease forwards;}
+@keyframes lf{from{width:0}to{width:100%}}
+.l-sub{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(181,153,106,0.5);margin-top:16px;}
+/* AUTH */
+.auth-box{background:var(--panel);border-radius:12px;width:100%;max-width:450px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.4);}
+.auth-hdr{background:var(--sb);padding:28px 36px 22px;border-bottom:2px solid var(--gold);text-align:center;}
+.auth-logo{font-family:'Montserrat',sans-serif;font-weight:900;font-size:22px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+.auth-s{font-size:12px;color:rgba(250,250,248,0.35);}
+.auth-bd{padding:28px 36px;}
+.auth-tabs{display:flex;margin-bottom:22px;border:1px solid var(--bdr);border-radius:6px;overflow:hidden;}
+.a-tab{flex:1;padding:10px;text-align:center;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);background:var(--p2);transition:all 0.15s;border:none;}
+.a-tab.on{background:var(--gold);color:var(--sb);}
+.auth-err{background:var(--r-soft);border:1px solid rgba(155,58,47,0.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:4px;margin-bottom:12px;display:none;}
+.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.r-btn{border:2px solid var(--bdr);border-radius:6px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--p2);transition:all 0.15s;}
+.r-btn:hover,.r-btn.on{border-color:var(--gold);}
+.r-btn.on{background:rgba(181,153,106,0.08);}
+.r-btn .ri{font-size:22px;margin-bottom:5px;}
+.r-btn .rn{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);}
+.r-btn.on .rn{color:var(--gold);}
+.inv-wrap{display:none;margin-bottom:14px;}
+.inv-wrap.show{display:block;}
+/* ONBOARDING */
+.ob-box{background:var(--panel);border-radius:12px;width:100%;max-width:580px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.3);margin:auto;}
+.ob-hdr{background:var(--sb);padding:24px 36px 20px;}
+.ob-prog{display:flex;gap:6px;margin-bottom:14px;}
+.ob-dot{height:4px;flex:1;border-radius:2px;background:rgba(181,153,106,0.2);transition:background 0.3s;}
+.ob-dot.on{background:var(--gold);}
+.ob-bd{padding:32px 36px;}
+/* PAYWALL */
+.pw-box{background:var(--panel);border-radius:12px;width:100%;max-width:640px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.4);margin:auto;}
+.pw-hdr{background:var(--sb);padding:28px 36px 22px;text-align:center;border-bottom:2px solid var(--gold);}
+.plan-c{border:2px solid var(--bdr);border-radius:8px;padding:18px;cursor:pointer;transition:all 0.15s;display:flex;align-items:flex-start;gap:14px;margin-bottom:10px;}
+.plan-c:hover,.plan-c.on{border-color:var(--gold);background:rgba(181,153,106,0.04);}
+.plan-chk{width:22px;height:22px;border-radius:50%;border:2px solid var(--bdr);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all 0.15s;}
+.plan-c.on .plan-chk{background:var(--gold);border-color:var(--gold);color:var(--sb);}
+/* APP SHELL */
+.app{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:220px;flex-shrink:0;background:var(--sb);border-right:1px solid rgba(181,153,106,0.15);display:flex;flex-direction:column;overflow-y:auto;}
+.sb-logo{padding:18px 18px 14px;border-bottom:1px solid rgba(181,153,106,0.15);}
+.wordmark{font-family:'Montserrat',sans-serif;font-weight:900;font-size:16px;letter-spacing:5px;color:var(--gold);text-transform:uppercase;}
+.gym-nm{font-size:11px;font-weight:600;color:rgba(250,250,248,0.5);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.role-tag{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(250,250,248,0.3);margin-top:1px;}
+.sb-user{padding:12px 14px;border-bottom:1px solid rgba(181,153,106,0.15);display:flex;align-items:center;gap:10px;}
+.user-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#7A5A2A);display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-weight:800;font-size:11px;color:var(--sb);flex-shrink:0;}
+.uname{font-size:13px;font-weight:600;color:#FAFAF8;line-height:1.2;}
+.ubelt{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);opacity:0.75;}
+.sb-nav{flex:1;padding:10px 0;}
+.nav-sec{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(250,250,248,0.2);padding:10px 16px 4px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;margin:1px 6px;border-radius:4px;cursor:pointer;transition:all 0.12s;font-size:13px;font-weight:500;color:rgba(250,250,248,0.5);border:1px solid transparent;}
+.nav-item:hover{background:rgba(181,153,106,0.08);color:rgba(250,250,248,0.9);}
+.nav-item.on{background:rgba(181,153,106,0.12);border-color:rgba(181,153,106,0.2);color:var(--gold);}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;}
+.sb-bot{padding:10px;border-top:1px solid rgba(181,153,106,0.15);}
+.sm-tog{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:4px;background:rgba(181,153,106,0.06);border:1px solid rgba(181,153,106,0.15);cursor:pointer;margin-bottom:8px;}
+.sm-lbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(250,250,248,0.45);flex:1;}
+.tog-sw{width:30px;height:17px;background:rgba(255,255,255,0.1);border-radius:9px;position:relative;transition:background 0.2s;flex-shrink:0;}
+.tog-sw.on{background:var(--gold);}
+.tog-sw::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform 0.2s;}
+.tog-sw.on::after{transform:translateX(13px);}
+.so-btn{width:100%;background:transparent;border:1px solid rgba(181,153,106,0.15);color:rgba(250,250,248,0.35);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:4px;cursor:pointer;transition:all 0.15s;}
+.so-btn:hover{border-color:var(--red);color:rgba(155,58,47,0.8);}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;background:var(--bg);}
+.topbar{height:56px;flex-shrink:0;background:var(--panel);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.tb-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15px;flex:1;}
+.content{flex:1;padding:20px 24px 40px;}
+/* COMPONENTS */
+.btn{background:var(--panel);border:1px solid var(--bdr);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 14px;border-radius:4px;cursor:pointer;transition:all 0.15s;}
+.btn:hover{border-color:var(--gold);color:var(--gold);}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:var(--sb);}
+.btn.primary:hover{background:var(--gold-l);}
+.btn.danger{background:var(--r-soft);border-color:rgba(155,58,47,0.3);color:var(--red);}
+.btn.full{width:100%;padding:14px;}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.stats2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px;}
+.stat{background:var(--panel);border:1px solid var(--bdr);border-radius:8px;padding:16px 18px 14px;position:relative;overflow:hidden;transition:box-shadow 0.2s;cursor:default;}
+.stat:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08);}
+.si{position:absolute;right:14px;top:14px;font-size:20px;opacity:0.12;}
+.sl{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--t3);margin-bottom:8px;}
+.sv{font-family:'Montserrat',sans-serif;font-weight:900;font-size:30px;line-height:1;margin-bottom:5px;}
+.sv.gold{color:var(--gold);}
+.ssub{font-size:12px;color:var(--t3);}
+.card{background:var(--panel);border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+.card-hdr{padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--p2);}
+.card-hdr h4{font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;}
+.card-body{}
+.table{width:100%;border-collapse:collapse;}
+.table th{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--t3);padding:9px 14px;text-align:left;border-bottom:1px solid var(--bdr);background:var(--p2);}
+.table td{padding:10px 14px;font-size:13px;color:var(--t2);border-bottom:1px solid var(--bdr2);vertical-align:middle;}
+.table tr:last-child td{border-bottom:none;}
+.table tbody tr:hover td{background:rgba(181,153,106,0.04);}
+.name-cell{font-weight:600;color:var(--t);display:flex;align-items:center;gap:9px;}
+.mini-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#EDE0CB,var(--gold));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--sb);flex-shrink:0;}
+.pill{display:inline-flex;align-items:center;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.pill.present{background:var(--g-soft);color:var(--green);border:1px solid rgba(42,107,42,0.2);}
+.pill.absent{background:var(--r-soft);color:var(--red);border:1px solid rgba(155,58,47,0.2);}
+.pill.ip{background:var(--y-soft);color:#8A6010;border:1px solid rgba(181,130,30,0.25);}
+.pill.not-r{background:rgba(0,0,0,0.05);color:var(--t3);border:1px solid var(--bdr);}
+.pill.gold-p{background:rgba(181,153,106,0.12);color:var(--gold);border:1px solid rgba(181,153,106,0.25);}
+.prog-bar{flex:1;height:5px;background:var(--bg);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:3px;background:var(--gold);transition:width 0.5s;}
+.prog-wrap{display:flex;align-items:center;gap:8px;}
+.prog-pct{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--t3);width:30px;text-align:right;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.sec-hdr h3{font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;}
+.slink{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);cursor:pointer;opacity:0.8;border:none;background:none;}
+.slink:hover{opacity:1;}
+.class-card{background:var(--panel);border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;transition:all 0.15s;cursor:pointer;border-left:3px solid var(--gold);box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+.class-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.1);transform:translateY(-1px);}
+.cn{font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;margin-bottom:5px;}
+.ct{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-top:8px;}
+.cm{font-size:12px;color:var(--t2);display:flex;gap:10px;flex-wrap:wrap;}
+.tile{background:var(--panel);border:1px solid var(--bdr);border-radius:8px;padding:16px 12px;text-align:center;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+.tile:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.1);}
+.tile.dim{opacity:0.4;cursor:not-allowed;transform:none !important;}
+.ti{font-size:24px;margin-bottom:8px;}
+.tl{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);}
+.att-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--bdr2);}
+.att-row:hover{background:rgba(181,153,106,0.04);}
+.att-name{flex:1;font-size:13px;font-weight:600;}
+.att-meta{font-size:11px;color:var(--t3);flex:1;}
+.att-btns{display:flex;gap:6px;}
+.att-btn{width:72px;padding:6px 0;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-radius:4px;cursor:pointer;border:1px solid var(--bdr);color:var(--t3);background:var(--bg);transition:all 0.15s;}
+.att-btn:hover{border-color:var(--gold);color:var(--gold);}
+.att-btn.sel-p{background:var(--g-soft);border-color:rgba(42,107,42,0.3);color:var(--green);}
+.att-btn.sel-a{background:var(--r-soft);border-color:rgba(155,58,47,0.3);color:var(--red);}
+.skill-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--bdr2);}
+.skill-nm{flex:1;font-size:13px;cursor:pointer;color:var(--gold);}
+.ssbs{display:flex;gap:4px;}
+.ssb{padding:4px 8px;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:3px;cursor:pointer;border:1px solid var(--bdr);color:var(--t3);background:var(--bg);transition:all 0.15s;}
+.ssb.sel-nr{background:rgba(0,0,0,0.06);border-color:rgba(0,0,0,0.12);color:var(--t2);}
+.ssb.sel-ip{background:var(--y-soft);border-color:rgba(181,130,30,0.3);color:#8A6010;}
+.ssb.sel-m{background:var(--g-soft);border-color:rgba(42,107,42,0.3);color:var(--green);}
+.evt-hdr{padding:6px 14px 4px;background:var(--p2);border-bottom:1px solid var(--bdr);font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);}
+.alert{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:6px;margin-bottom:12px;font-size:13px;line-height:1.45;}
+.alert.warn{background:var(--y-soft);border:1px solid rgba(181,130,30,0.2);color:#7A5500;}
+.alert.info{background:var(--b-soft);border:1px solid rgba(30,74,124,0.2);color:var(--blue);}
+.alert.ok{background:var(--g-soft);border:1px solid rgba(42,107,42,0.2);color:var(--green);}
+.alert.danger{background:var(--r-soft);border:1px solid rgba(155,58,47,0.2);color:var(--red);}
+.ps-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--bdr2);}
+.ps-row:hover{background:rgba(181,153,106,0.04);cursor:pointer;}
+.belt-b{display:inline-flex;align-items:center;gap:5px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t2);}
+.belt-d{width:10px;height:10px;border-radius:50%;}
+.ai-card{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:16px 18px;margin-bottom:16px;}
+.ai-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.ai-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;color:#a5b4fc;}
+.ai-badge{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:rgba(99,102,241,0.2);color:#818cf8;border:1px solid rgba(99,102,241,0.3);padding:2px 8px;border-radius:10px;margin-left:auto;}
+.ai-loading{color:rgba(250,250,248,0.4);font-size:13px;display:flex;align-items:center;gap:4px;}
+.ai-loading span{animation:blink 1.4s infinite;}
+.ai-loading span:nth-child(2){animation-delay:.2s;}
+.ai-loading span:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,80%,100%{opacity:0;}40%{opacity:1;}}
+.ai-txt{font-size:13px;color:rgba(250,250,248,0.75);line-height:1.65;}
+.ai-ac{display:flex;gap:8px;margin-top:12px;}
+.ai-btn{background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border-radius:3px;cursor:pointer;}
+.fg{margin-bottom:14px;}
+.fl{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);display:block;margin-bottom:6px;}
+.fi,.ft,.fs{width:100%;background:var(--bg);border:1px solid var(--bdr);border-radius:4px;padding:9px 12px;font-family:'Barlow',sans-serif;font-size:13px;color:var(--t);outline:none;transition:border-color 0.2s;}
+.fi::placeholder,.ft::placeholder{color:var(--t3);}
+.fi:focus,.ft:focus,.fs:focus{border-color:var(--gold);background:var(--panel);}
+.ft{resize:vertical;min-height:90px;}
+/* MODALS */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:7000;display:none;align-items:center;justify-content:center;}
+.mo.open{display:flex;}
+.mo-box{background:var(--panel);border-radius:10px;padding:28px;width:100%;max-width:480px;border:1px solid var(--bdr);max-height:90vh;overflow-y:auto;}
+.mo-box.wide{max-width:580px;}
+.mo-box.tall{max-width:540px;}
+.mo-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px;}
+/* TOAST & SYNC */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--sb);color:#FAFAF8;border:1px solid rgba(181,153,106,0.3);border-radius:6px;padding:12px 20px;font-size:13px;font-weight:600;z-index:99999;transition:transform .3s;box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+#syncDot{position:fixed;bottom:20px;right:20px;background:var(--sb);color:rgba(250,250,248,.7);border:1px solid rgba(181,153,106,.3);border-radius:20px;padding:8px 14px;font-size:12px;font-weight:600;z-index:5000;opacity:0;transition:opacity .3s;pointer-events:none;}
+#syncDot.show{opacity:1;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+@media(max-width:960px){.stats4{grid-template-columns:repeat(2,1fr);}.g4{grid-template-columns:repeat(2,1fr);}.g3{grid-template-columns:1fr 1fr;}}
+@media(max-width:700px){.sidebar{display:none;}.g2,.g3{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen" class="layer dark"><div style="display:flex;flex-direction:column;align-items:center;"><div class="l-logo">KINETIC</div><div class="l-bar"><div class="l-fill"></div></div><div class="l-sub">Loading your platform...</div></div></div>
+<div id="authScreen" class="layer dark" style="display:none;">
+  <div class="auth-box">
+    <div class="auth-hdr"><div class="auth-logo">KINETIC</div><div class="auth-s">The coaching platform gymnastics needs</div></div>
+    <div class="auth-bd">
+      <div class="auth-tabs">
+        <button class="a-tab on" id="siTab" onclick="K.switchTab('in')">Sign In</button>
+        <button class="a-tab" id="suTab" onclick="K.switchTab('up')">Create Account</button>
+      </div>
+      <div id="inForm">
+        <div class="auth-err" id="inErr"></div>
+        <label class="fl">Email</label><input class="fi" type="email" id="inEmail" placeholder="you@gym.com" style="margin-bottom:14px;" onkeydown="if(event.key==='Enter')K.signIn()">
+        <label class="fl">Password</label><input class="fi" type="password" id="inPass" placeholder="Your password" style="margin-bottom:18px;" onkeydown="if(event.key==='Enter')K.signIn()">
+        <button class="btn primary full" onclick="K.signIn()" id="inBtn">Sign In →</button>
+        <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--t3);">No account? <span style="color:var(--gold);cursor:pointer;" onclick="K.switchTab('up')">Create one free →</span></p>
+      </div>
+      <div id="upForm" style="display:none;">
+        <div class="auth-err" id="upErr"></div>
+        <label class="fl">Your Name</label><input class="fi" type="text" id="upName" placeholder="First Last" style="margin-bottom:14px;">
+        <label class="fl">Email</label><input class="fi" type="email" id="upEmail" placeholder="you@gym.com" style="margin-bottom:14px;">
+        <label class="fl">Password (6+ characters)</label><input class="fi" type="password" id="upPass" placeholder="Create a password" style="margin-bottom:14px;">
+        <label class="fl">I am a...</label>
+        <div class="role-grid">
+          <div class="r-btn on" data-role="director" onclick="K.pickRole(this)"><div class="ri">🏛️</div><div class="rn">Director</div></div>
+          <div class="r-btn" data-role="coach" onclick="K.pickRole(this)"><div class="ri">🥋</div><div class="rn">Coach</div></div>
+          <div class="r-btn" data-role="parent" onclick="K.pickRole(this)"><div class="ri">👪</div><div class="rn">Parent</div></div>
+        </div>
+        <div class="inv-wrap" id="invWrap">
+          <label class="fl">Invite Code (from your director)</label>
+          <input class="fi" id="upCode" placeholder="Enter your 6-character code" style="letter-spacing:3px;font-weight:700;text-transform:uppercase;">
+          <p style="font-size:11px;color:var(--t3);margin-top:4px;">Your director generates this when they invite you.</p>
+        </div>
+        <button class="btn primary full" onclick="K.signUp()" id="upBtn">Create Account →</button>
+        <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--t3);">Already have an account? <span style="color:var(--gold);cursor:pointer;" onclick="K.switchTab('in')">Sign in →</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="obScreen" class="layer light" style="display:none;">
+  <div class="ob-box">
+    <div class="ob-hdr">
+      <div class="ob-prog" id="obProg"><div class="ob-dot on"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:15px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;">KINETIC</div>
+      <div id="obLbl" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(250,250,248,0.35);margin-top:4px;">Director Setup</div>
+    </div>
+    <div class="ob-bd" id="obBd"></div>
+  </div>
+</div>
+
+<div id="pwScreen" class="layer dark" style="display:none;">
+  <div class="pw-box">
+    <div class="pw-hdr">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:22px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;">KINETIC</div>
+      <div style="font-size:15px;color:rgba(250,250,248,0.6);margin-bottom:4px;">Choose your plan</div>
+      <div style="font-size:12px;color:rgba(250,250,248,0.35);">Start free. Upgrade anytime.</div>
+    </div>
+    <div style="padding:28px 32px;" id="pwBd"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="syncDot">☁️ Saving...</div>
+
+<div class="app" id="appShell" style="display:none;">
+  <aside class="sidebar">
+    <div class="sb-logo"><div class="wordmark">KINETIC</div><div class="gym-nm" id="gymNm"></div><div class="role-tag" id="roleTag"></div></div>
+    <div class="sb-user"><div class="user-av" id="uAv">?</div><div><div class="uname" id="uNm">...</div><div class="ubelt" id="uBelt"></div></div></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-bot">
+      <div class="sm-tog" id="smTog" style="display:none;" onclick="K.toggleSimple()"><span class="sm-lbl">Simple Mode</span><div class="tog-sw" id="togSw"></div></div>
+      <button class="so-btn" onclick="K.signOut()">Sign Out</button>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar"><div class="tb-title" id="tbTitle">KINETIC</div></div>
+    <div class="content" id="mc"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     ALL MODALS — ALWAYS IN THE DOM — NEVER MISSING
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- Add Athlete -->
+<div class="mo" id="addAthModal" onclick="if(event.target===this)K.closeModal('addAthModal')">
+  <div class="mo-box tall" onclick="event.stopPropagation()" id="addAthContent"></div>
+</div>
+
+<!-- Edit Athlete -->
+<div class="mo" id="editAthModal" onclick="if(event.target===this)K.closeModal('editAthModal')">
+  <div class="mo-box tall" onclick="event.stopPropagation()" id="editAthContent"></div>
+</div>
+
+<!-- View Athlete -->
+<div class="mo" id="viewAthModal" onclick="if(event.target===this)K.closeModal('viewAthModal')">
+  <div class="mo-box tall" onclick="event.stopPropagation()" id="viewAthContent"></div>
+</div>
+
+<!-- Add Class -->
+<div class="mo" id="addClassModal" onclick="if(event.target===this)K.closeModal('addClassModal')">
+  <div class="mo-box" onclick="event.stopPropagation()">
+    <div class="mo-title">Add New Class</div>
+    <div class="fg"><label class="fl">Class Name *</label><input class="fi" id="nc_name" placeholder="e.g. Level 1 Beginner"></div>
+    <div class="g2" style="margin-bottom:0;">
+      <div class="fg"><label class="fl">Day</label><select class="fs" id="nc_day"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select></div>
+      <div class="fg"><label class="fl">Time *</label><input class="fi" id="nc_time" placeholder="4:00 PM"></div>
+    </div>
+    <div class="g2" style="margin-bottom:0;">
+      <div class="fg"><label class="fl">Assign Coach</label><select class="fs" id="nc_coach"><option value="">TBD</option></select></div>
+      <div class="fg"><label class="fl">Capacity</label><input class="fi" type="number" id="nc_cap" value="8" min="1"></div>
+    </div>
+    <div class="fg"><label class="fl">Level</label><select class="fs" id="nc_level"></select></div>
+    <div class="fg"><label class="fl">Public Notes (visible to parents)</label><textarea class="ft" id="nc_notes" style="min-height:60px;" placeholder="Notes for this class..."></textarea></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" style="flex:1;" onclick="K.closeModal('addClassModal')">Cancel</button>
+      <button class="btn primary" style="flex:1;" onclick="K.saveNewClass()">Save Class →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Class Detail -->
+<div class="mo" id="classModal" onclick="if(event.target===this)K.closeModal('classModal')">
+  <div class="mo-box wide" onclick="event.stopPropagation()" id="classMoContent"></div>
+</div>
+
+<!-- Invite Modal -->
+<div class="mo" id="inviteModal" onclick="if(event.target===this)K.closeModal('inviteModal')">
+  <div class="mo-box" onclick="event.stopPropagation()">
+    <div class="mo-title" id="invTitle">Invite</div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:20px;" id="invDesc">Generate a unique 6-character code.</p>
+    <div class="fg"><label class="fl">Name</label><input class="fi" id="inv_name" placeholder="First Last"></div>
+    <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="inv_email" placeholder="email@example.com"></div>
+    <div id="invBeltWrap" class="fg"><label class="fl">Starting Belt Level</label><select class="fs" id="inv_belt"></select></div>
+    <div id="invResult" style="display:none;background:var(--g-soft);border:1px solid rgba(42,107,42,0.2);border-radius:6px;padding:16px;margin-bottom:14px;text-align:center;">
+      <div style="font-size:12px;color:var(--green);margin-bottom:8px;">✓ Invite Code Generated!</div>
+      <div id="invCode" style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:32px;letter-spacing:6px;"></div>
+      <div style="font-size:11px;color:var(--t3);margin-top:6px;">They enter this code when creating their account.</div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn" style="flex:1;" onclick="navigator.clipboard.writeText(document.getElementById('invCode').textContent).then(()=>window.toast('✓ Copied!'))">Copy Code</button>
+        <button class="btn" style="flex:1;" onclick="K.resetInvite()">+ Invite Another</button>
+      </div>
+    </div>
+    <div id="invActions" style="display:flex;gap:8px;">
+      <button class="btn" style="flex:1;" onclick="K.closeModal('inviteModal')">Cancel</button>
+      <button class="btn primary" style="flex:1;" id="invBtn" onclick="K.generateInvite()">Generate Invite →</button>
+    </div>
+    <div id="invDone" style="display:none;margin-top:8px;">
+      <button class="btn primary full" onclick="K.closeModal('inviteModal')">✓ Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Message -->
+<div class="mo" id="newMsgModal" onclick="if(event.target===this)K.closeModal('newMsgModal')">
+  <div class="mo-box" onclick="event.stopPropagation()">
+    <div class="mo-title">New Message</div>
+    <div class="fg"><label class="fl">To</label><select class="fs" id="msg_to">
+      <option value="coaches">All Coaches</option>
+      <option value="parents">All Parents</option>
+    </select></div>
+    <div class="fg"><label class="fl">Subject</label><input class="fi" id="msg_sub" placeholder="Subject"></div>
+    <div class="fg"><label class="fl">Message</label><textarea class="ft" id="msg_body" placeholder="Write your message..." style="min-height:120px;"></textarea></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" style="flex:1;" onclick="K.closeModal('newMsgModal')">Cancel</button>
+      <button class="btn primary" style="flex:1;" onclick="K.sendMsg()">Send →</button>
+    </div>
+  </div>
+</div>
+
+<!-- View Message -->
+<div class="mo" id="msgViewModal" onclick="if(event.target===this)K.closeModal('msgViewModal')">
+  <div class="mo-box wide" onclick="event.stopPropagation()" id="msgViewContent"></div>
+</div>
+
+<!-- Edit Tuition -->
+<div class="mo" id="editTuitionModal" onclick="if(event.target===this)K.closeModal('editTuitionModal')">
+  <div class="mo-box" onclick="event.stopPropagation()" id="editTuitionContent"></div>
+</div>
+
+<!-- Add Charge -->
+<div class="mo" id="addChargeModal" onclick="if(event.target===this)K.closeModal('addChargeModal')">
+  <div class="mo-box" onclick="event.stopPropagation()">
+    <div class="mo-title">Add Charge</div>
+    <div class="fg"><label class="fl">Athlete</label><select class="fs" id="ch_ath"><option value="all">All Athletes</option></select></div>
+    <div class="fg"><label class="fl">Type</label><select class="fs" id="ch_type"><option>Meet Fee</option><option>Late Fee</option><option>Registration Fee</option><option>Competition Fee</option><option>Uniform Fee</option><option>Other</option></select></div>
+    <div class="fg"><label class="fl">Amount ($)</label><input class="fi" type="number" id="ch_amt" placeholder="50"></div>
+    <div class="fg"><label class="fl">Description</label><input class="fi" id="ch_desc" placeholder="e.g. Spring Meet registration"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" style="flex:1;" onclick="K.closeModal('addChargeModal')">Cancel</button>
+      <button class="btn primary" style="flex:1;" onclick="K.saveCharge()">Add Charge →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Roster Modal (coach view) -->
+<div class="mo" id="rosterModal" onclick="if(event.target===this)K.closeModal('rosterModal')">
+  <div class="mo-box" onclick="event.stopPropagation()" id="rosterContent"></div>
+</div>
+
+<!-- Sub Request (coach) -->
+<div class="mo" id="subReqModal" onclick="if(event.target===this)K.closeModal('subReqModal')">
+  <div class="mo-box" onclick="event.stopPropagation()">
+    <div class="mo-title">Request a Substitute</div>
+    <div class="fg"><label class="fl">Class</label><select class="fs" id="sub_cls"></select></div>
+    <div class="fg"><label class="fl">Date Needed</label><input class="fi" type="date" id="sub_date"></div>
+    <div class="fg"><label class="fl">Reason</label><textarea class="ft" id="sub_reason" style="min-height:70px;" placeholder="Why do you need a sub?"></textarea></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" style="flex:1;" onclick="K.closeModal('subReqModal')">Cancel</button>
+      <button class="btn primary" style="flex:1;" onclick="K.submitSubReq()">Send to Director →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clock Out -->
+<div class="mo" id="coModal" onclick="">
+  <div class="mo-box" onclick="event.stopPropagation()">
+    <div class="mo-title">Before You Go 👋</div>
+    <div id="coS1"><p style="font-size:14px;color:var(--t2);margin-bottom:20px;">Just two quick questions.</p>
+      <label class="fl" style="margin-bottom:10px;display:block;">Is your time correct?</label>
+      <div style="display:flex;gap:8px;"><button class="btn primary" style="flex:1;" onclick="K.coTime(true)">✓ Yes</button><button class="btn danger" style="flex:1;" onclick="K.coTime(false)">No — flag it</button></div>
+    </div>
+    <div id="coS2" style="display:none;">
+      <div class="fg"><label class="fl">Note to Director about time issue</label><textarea class="ft" id="coNote" placeholder="e.g. I arrived at 4:15 but shows 3:55..." style="min-height:80px;"></textarea></div>
+      <button class="btn primary full" onclick="K.coNote()">Send Note & Continue →</button>
+    </div>
+    <div id="coS3" style="display:none;">
+      <label class="fl" style="margin-bottom:10px;display:block;">Did anyone get injured today?</label>
+      <div style="display:flex;gap:8px;"><button class="btn primary" style="flex:1;" onclick="K.coInjury(false)">✓ No injuries</button><button class="btn danger" style="flex:1;" onclick="K.coInjury(true)">Yes — injury occurred</button></div>
+    </div>
+    <div id="coS4" style="display:none;">
+      <div class="alert danger" style="margin-bottom:20px;"><strong>Report immediately to your director</strong> before leaving. This has been logged automatically.</div>
+      <button class="btn primary full" onclick="K.coFinish()">I have reported — Clock Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lesson Plan -->
+<div class="mo" id="lpModal" onclick="if(event.target===this)K.closeModal('lpModal')">
+  <div class="mo-box" onclick="event.stopPropagation()" style="text-align:center;">
+    <div style="font-size:40px;margin-bottom:16px;">📋</div>
+    <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:8px;" id="lpTitle"></h3>
+    <p style="font-size:14px;color:var(--t2);line-height:1.6;margin-bottom:16px;">Full lesson plan content is coming to KINETIC soon — detailed week-by-week curricula for every level.</p>
+    <div class="alert info" style="text-align:left;">✨ AI-generated lesson plans from your class notes will appear here automatically after each session.</div>
+    <button class="btn primary full" style="margin-top:16px;" onclick="K.closeModal('lpModal')">Got it</button>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db, APP, SKILLS, BELT_COLORS, BELT_LEVELS, ini, bc, greet, toast, sync } from './firebase-config.js';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+import { doc, setDoc, getDoc, collection, addDoc, getDocs, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+import { coachDash, coachAtt, coachSkills, coachNotes, coachSched, coachMsgs, coachProfile, library, skillDetail, lessonPlans } from './views-coach.js';
+import { dirHome, dirSched, dirAthletes, dirCoaches, dirTimecards, dirMsgs, dirBilling, dirSubs, dirInjuries } from './views-director.js';
+import { parentHome, parentSkills, parentTuition, parentMsgs } from './views-parent.js';
+
+// ─── STATE ───
+let suRole='director', obStep=1, obData={}, obPlan='crew';
+
+// ─── HELPERS ───
+const $  = id => document.getElementById(id);
+const show = id => { const e=$(id); if(e) e.style.display='flex'; };
+const hide = id => { const e=$(id); if(e) e.style.display='none'; };
+const val  = id => $(id)?.value||'';
+const sval = (id,v) => { const e=$(id); if(e) e.value=v; };
+
+// ─── AUTH OBSERVER ───
+onAuthStateChanged(auth, async user => {
+  if (!user) { showAuth(); return; }
+  APP.user = user;
+  APP.profile = { name: user.email.split('@')[0], email: user.email, role: 'director', belt: 'Foundation', certifications: [] };
+  // Load profile with retry (handles signup race condition)
+  for (let i = 0; i < 4; i++) {
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (snap.exists()) {
+        APP.profile = { ...APP.profile, ...snap.data() };
+        APP.role = APP.profile.role || 'director';
+        APP.gymId = APP.profile.gymId || null;
+        break;
+      } else if (i === 3) {
+        await setDoc(doc(db,'users',user.uid), { name:user.email.split('@')[0], email:user.email, role:'director', belt:'Foundation', certifications:[], createdAt: new Date().toISOString() });
+      }
+    } catch(e) { console.warn(e); }
+    if (i < 3) await new Promise(r => setTimeout(r, 600));
+  }
+  if (APP.role === 'director' && !APP.gymId) { showOb(); return; }
+  await loadAll();
+  showApp();
+});
+
+// ─── DATA LOAD ───
+async function loadAll() {
+  const gid = APP.gymId;
+  if (!gid) { APP.allClasses=[];APP.allAthletes=[];APP.archivedAthletes=[];APP.allCoaches=[];APP.allTimecards=[];APP.myTimecards=[];APP.subRequests=[];APP.allInjuries=[];APP.messages=[]; return; }
+  try {
+    const [clsS,athS,coaS,tcS,subS,injS,msgS] = await Promise.all([
+      getDocs(query(collection(db,'classes'),where('gymId','==',gid))),
+      getDocs(query(collection(db,'athletes'),where('gymId','==',gid))),
+      getDocs(query(collection(db,'users'),where('gymId','==',gid),where('role','==','coach'))),
+      getDocs(query(collection(db,'timecards'),where('gymId','==',gid))),
+      getDocs(query(collection(db,'subRequests'),where('gymId','==',gid))),
+      getDocs(query(collection(db,'injuries'),where('gymId','==',gid))),
+      getDocs(query(collection(db,'messages'),where('gymId','==',gid))),
+    ]);
+    APP.allClasses = clsS.docs.map(d=>({id:d.id,...d.data()}));
+    const allAth = athS.docs.map(d=>({id:d.id,...d.data()}));
+    APP.allAthletes = allAth.filter(a=>!a.archived);
+    APP.archivedAthletes = allAth.filter(a=>a.archived);
+    APP.allCoaches = coaS.docs.map(d=>({id:d.id,...d.data()})).filter(c=>c.role==='coach');
+    APP.allTimecards = tcS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.clockIn||0)-new Date(a.clockIn||0));
+    APP.subRequests = subS.docs.map(d=>({id:d.id,...d.data()}));
+    APP.allInjuries = injS.docs.map(d=>({id:d.id,...d.data()}));
+    APP.messages = msgS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+    if (APP.role==='coach') {
+      const myTc = await getDocs(query(collection(db,'timecards'),where('coachId','==',APP.user.uid)));
+      APP.myTimecards = myTc.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.clockIn||0)-new Date(a.clockIn||0));
+    }
+    if (APP.role==='parent') {
+      const myAth = await getDocs(query(collection(db,'athletes'),where('parentEmail','==',APP.user.email)));
+      APP.parentAthletes = myAth.docs.map(d=>({id:d.id,...d.data()}));
+      const myMsg = await getDocs(query(collection(db,'messages'),where('gymId','==',gid)));
+      APP.messages = myMsg.docs.map(d=>({id:d.id,...d.data()})).filter(m=>m.toId===APP.user.uid||m.toRole==='parents'||m.fromId===APP.user.uid);
+    }
+    const gymSnap = await getDoc(doc(db,'gyms',gid));
+    if (gymSnap.exists()) APP.gymProfile = gymSnap.data();
+  } catch(e) { console.warn('loadAll:', e); }
+}
+
+// ─── SCREENS ───
+function showAuth(){hide('loadingScreen');show('authScreen');hide('obScreen');hide('pwScreen');hide('appShell');}
+function showOb(){hide('loadingScreen');hide('authScreen');show('obScreen');hide('pwScreen');hide('appShell');renderOb(1);}
+function showPw(){hide('loadingScreen');hide('authScreen');hide('obScreen');show('pwScreen');hide('appShell');renderPw();}
+function showApp(){
+  hide('loadingScreen');hide('authScreen');hide('obScreen');hide('pwScreen');
+  $('appShell').style.display='flex';
+  initApp();
+}
+
+// ─── ONBOARDING ───
+function renderOb(step){
+  obStep=step;
+  document.querySelectorAll('.ob-dot').forEach((d,i)=>d.classList.toggle('on',i<step));
+  $('obLbl').textContent=`Step ${step} of 4 — ${['','Your Gym','Your Team','Choose a Plan','Ready!'][step]}`;
+  const bd=$('obBd');
+  if(step===1) bd.innerHTML=`
+    <div style="font-size:48px;margin-bottom:16px;">🏛️</div>
+    <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:24px;margin-bottom:8px;">Welcome to KINETIC.</div>
+    <div style="font-size:14px;color:var(--t2);line-height:1.6;margin-bottom:28px;">Let's set up your gym. Takes about 2 minutes.</div>
+    <div class="fg"><label class="fl">Gym Name *</label><input class="fi" id="ob_gym" placeholder="e.g. Elite Gymnastics Academy" value="${obData.gymName||''}"></div>
+    <div class="fg"><label class="fl">Your Title</label><input class="fi" id="ob_title" placeholder="e.g. Head Coach, Owner, Director" value="${obData.title||''}"></div>
+    <div class="g2" style="margin-bottom:0;">
+      <div class="fg"><label class="fl">City</label><input class="fi" id="ob_city" value="${obData.city||''}"></div>
+      <div class="fg"><label class="fl">State</label><input class="fi" id="ob_state" value="${obData.state||''}"></div>
+    </div>
+    <div class="fg"><label class="fl">Phone</label><input class="fi" type="tel" id="ob_phone" value="${obData.phone||''}"></div>
+    <button class="btn primary full" onclick="K.obNext(1)">Continue →</button>`;
+  if(step===2) bd.innerHTML=`
+    <div style="font-size:48px;margin-bottom:16px;">🧑‍🏫</div>
+    <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:24px;margin-bottom:8px;">Tell us about your team.</div>
+    <div style="font-size:14px;color:var(--t2);margin-bottom:28px;">Helps KINETIC set up the right structure.</div>
+    <div class="fg"><label class="fl">How many coaches?</label><select class="fs" id="ob_coaches"><option>1–3</option><option>4–8</option><option>9–15</option><option>15+</option></select></div>
+    <div class="fg"><label class="fl">Athletes enrolled?</label><select class="fs" id="ob_ath"><option>Under 25</option><option>25–50</option><option>50–100</option><option>100+</option></select></div>
+    <div class="fg"><label class="fl">Programs offered</label>
+      <div style="border:1px solid var(--bdr);border-radius:4px;background:var(--bg);padding:8px;">
+        ${['Compulsory Levels 1–5','Xcel Program','Recreational Classes','Preschool / Tiny Tots','Tumbling & Trampoline','Private Lessons'].map(p=>`
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;">
+          <input type="checkbox" name="ob_prog" value="${p}" style="accent-color:var(--gold);" ${(obData.programs||[]).includes(p)?'checked':''}><span style="font-size:13px;">${p}</span>
+        </label>`).join('')}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;"><button class="btn" onclick="renderOb(1)">← Back</button><button class="btn primary" style="flex:1;padding:14px;" onclick="K.obNext(2)">Continue →</button></div>`;
+  if(step===3) bd.innerHTML=`
+    <div style="font-size:48px;margin-bottom:16px;">💎</div>
+    <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:24px;margin-bottom:8px;">Choose your plan.</div>
+    <div style="font-size:14px;color:var(--t2);margin-bottom:24px;">No credit card required to get started.</div>
+    ${[{id:'solo',p:'$9.99',n:'Solo',d:'1 coach. Full feature access — skill library, AI, attendance, notes.'},{id:'crew',p:'$29.99',n:'Crew',d:'Up to 5 coaches. Director dashboard, athlete tracking, parent portal.'},{id:'elite',p:'$49.99',n:'Elite',d:'Unlimited coaches. Full platform plus billing and priority support.'}].map(plan=>`
+    <div class="plan-c ${obPlan===plan.id?'on':''}" onclick="obPlan='${plan.id}';renderOb(3)">
+      <div class="plan-chk">${obPlan===plan.id?'✓':''}</div>
+      <div><div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:22px;">${plan.p}<span style="font-size:14px;font-weight:500;color:var(--t2);">/mo</span></div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-top:2px;">${plan.n}</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:6px;">${plan.d}</div></div>
+    </div>`).join('')}
+    <div style="display:flex;gap:8px;margin-top:8px;"><button class="btn" onclick="renderOb(2)">← Back</button><button class="btn primary" style="flex:1;padding:14px;" onclick="K.obNext(3)">Continue →</button></div>`;
+  if(step===4) bd.innerHTML=`
+    <div style="font-size:48px;margin-bottom:16px;">🚀</div>
+    <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:24px;margin-bottom:8px;">You're all set, ${obData.gymName||'Coach'}!</div>
+    <div style="font-size:14px;color:var(--t2);line-height:1.6;margin-bottom:24px;">KINETIC is ready for <strong>${obData.gymName}</strong> on the <strong>${obPlan.charAt(0).toUpperCase()+obPlan.slice(1)}</strong> plan.</div>
+    <div style="background:rgba(181,153,106,0.08);border:1px solid rgba(181,153,106,0.2);border-radius:8px;padding:20px;margin-bottom:24px;">
+      ${['Invite coaches from the Coaches page','Add athletes with their parent emails','Set up your weekly class schedule','Coaches clock in and track skills immediately'].map((s,i)=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--bdr2);">
+        <div style="width:20px;height:20px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--sb);flex-shrink:0;">${i+1}</div>
+        <span style="font-size:13px;line-height:1.5;">${s}</span>
+      </div>`).join('')}
+    </div>
+    <button class="btn primary full" id="launchBtn" onclick="K.finishOb()">Launch My Dashboard →</button>`;
+}
+function renderPw(){
+  $('pwBd').innerHTML=`
+    <p style="font-size:14px;color:rgba(250,250,248,0.6);text-align:center;margin-bottom:24px;">Your free trial has ended.</p>
+    ${[{id:'solo',p:'$9.99',n:'Solo',d:'1 coach. Full access.'},{id:'crew',p:'$29.99',n:'Crew',d:'Up to 5 coaches + parent portal.'},{id:'elite',p:'$49.99',n:'Elite',d:'Unlimited coaches. Full platform.'}].map(plan=>`
+    <div class="plan-c ${obPlan===plan.id?'on':''}" onclick="obPlan='${plan.id}';renderPw()" style="background:rgba(255,255,255,0.05);border-color:rgba(181,153,106,${obPlan===plan.id?'0.5':'0.15'});">
+      <div class="plan-chk">${obPlan===plan.id?'✓':''}</div>
+      <div><div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:22px;color:#FAFAF8;">${plan.p}<span style="font-size:14px;color:rgba(250,250,248,0.4);">/mo</span></div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-top:2px;">${plan.n}</div>
+      <div style="font-size:12px;color:rgba(250,250,248,0.5);margin-top:6px;">${plan.d}</div></div>
+    </div>`).join('')}
+    <button class="btn primary full" style="margin-top:16px;" onclick="K.subscribe()">Subscribe — Stripe Coming Soon</button>`;
+}
+
+// ─── APP INIT ───
+function initApp(){
+  const p=APP.profile, r=APP.role;
+  $('uAv').textContent=ini(p.name||'?');
+  $('uNm').textContent=p.name||'User';
+  $('gymNm').textContent=APP.gymProfile?.name||p.gymName||'';
+  $('roleTag').textContent=r==='coach'?'Coach Portal':r==='director'?'Director Portal':'Parent Portal';
+  $('uBelt').textContent=r==='parent'?(APP.parentAthletes?.map(a=>a.name.split(' ')[0]).join(' & ')||'Parent'):`${p.belt||'Foundation'}`;
+  $('tbTitle').textContent=greet(p.name);
+  $('smTog').style.display=r==='coach'?'flex':'none';
+  APP.view=r==='coach'?'coachDash':r==='director'?'dirHome':'parentHome';
+  renderNav();render();
+}
+
+// ─── NAV ───
+const NAV={
+  coach:[{s:'Class Tools'},{i:'🏠',l:'Dashboard',v:'coachDash'},{i:'✅',l:'Attendance',v:'coachAtt'},{i:'🥋',l:'Skill Tracker',v:'coachSkills'},{i:'📝',l:'Notes',v:'coachNotes'},{i:'📋',l:'Lesson Plans',v:'lessons'},{s:'My KINETIC'},{i:'📚',l:'Skill Library',v:'library'},{i:'📅',l:'My Schedule',v:'coachSched'},{i:'💬',l:'Messages',v:'coachMsgs'},{i:'👤',l:'My Profile',v:'coachProfile'}],
+  director:[{s:'Operations'},{i:'🏠',l:'Overview',v:'dirHome'},{i:'👧',l:'Athletes',v:'dirAthletes'},{i:'🧑‍🏫',l:'Coaches',v:'dirCoaches'},{i:'📅',l:'Schedule',v:'dirSched'},{i:'💬',l:'Messages',v:'dirMsgs'},{i:'🔄',l:'Sub Requests',v:'dirSubs'},{s:'Admin'},{i:'💰',l:'Tuition',v:'dirBilling'},{i:'⏱️',l:'Timecards',v:'dirTimecards'},{i:'🚑',l:'Injury Log',v:'dirInjuries'},{s:'KINETIC'},{i:'📚',l:'Skill Library',v:'library'}],
+  parent:[{s:'My Athletes'},{i:'🏠',l:'Dashboard',v:'parentHome'},{i:'📈',l:'Skill Progress',v:'parentSkills'},{i:'💳',l:'Tuition',v:'parentTuition'},{i:'💬',l:'Messages',v:'parentMsgs'}],
+};
+function renderNav(){
+  const nav=NAV[APP.role]||[];
+  $('sbNav').innerHTML=nav.map(it=>{
+    if(it.s) return `<div class="nav-sec">${it.s}</div>`;
+    const on=APP.view===it.v||APP.view?.startsWith(it.v);
+    return `<div class="nav-item ${on?'on':''}" onclick="K.nav('${it.v}')"><span class="nav-icon">${it.i}</span>${it.l}</div>`;
+  }).join('');
+  const sw=$('togSw');if(sw)sw.classList.toggle('on',APP.simpleMode||false);
+}
+
+// ─── RENDER ───
+function render(){
+  const c=$('mc'); if(!c) return;
+  const v=APP.view||'coachDash';
+  const views={
+    coachDash,coachAtt,coachSkills,coachNotes,coachSched,coachMsgs,coachProfile,
+    lessons:lessonPlans,
+    library:()=>library(APP.libLevel||'all',APP.libEvent||'all'),
+    dirHome,dirSched,
+    dirAthletes:()=>dirAthletes('active'),
+    dirAthletes_arch:()=>dirAthletes('archived'),
+    dirCoaches,dirTimecards,dirMsgs,dirBilling,dirSubs,dirInjuries,
+    parentHome,parentSkills,parentTuition,parentMsgs,
+  };
+  if(v.startsWith('skill_')){c.innerHTML=skillDetail(v.replace('skill_',''));return;}
+  c.innerHTML=(views[v]?views[v]():`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;text-align:center;gap:14px;"><div style="font-size:44px;opacity:0.2;">🔒</div><h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;">Coming Soon</h3><p style="color:var(--t2);">This section is being built.</p></div>`);
+  if(v==='coachDash'){startClock();if(APP.clockedIn)loadAI();}
+  // update parent topbar
+  if(APP.role==='parent'){const ath=APP.parentAthletes?.[APP.parentAthIdx||0];if(ath)$('tbTitle').textContent=`${ath.name}'s Account`;}
+}
+
+// ─── CLOCK ───
+let clockTimer=null;
+function startClock(){
+  if(clockTimer)clearInterval(clockTimer);
+  const tick=()=>{const e=$('liveClock');if(e)e.textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});};
+  tick();clockTimer=setInterval(tick,1000);
+  if(APP.clockedIn){const et=()=>{const e=$('elapsedTime');if(e){const d=Math.floor((new Date()-APP.clockInTime)/60000);e.textContent=d>=60?`${Math.floor(d/60)}h ${d%60}m`:`${d}m`;}};et();setInterval(et,10000);}
+}
+
+// ─── AI ───
+async function loadAI(){
+  const el=$('aiContent');if(!el)return;
+  el.innerHTML=`<div class="ai-loading">Reading last session notes<span>.</span><span>.</span><span>.</span></div>`;
+  let notes=APP.classNotes||'';
+  if(!notes)try{const s=await getDoc(doc(db,`notes/${APP.user.uid}_${new Date(Date.now()-86400000).toISOString().split('T')[0]}_${APP.selectedClass?.id||'gen'}`));if(s.exists())notes=s.data().classNotes||'';}catch(e){}
+  if(!notes)notes='Class worked on Level 1 skills.';
+  APP.lastNotes=notes;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:400,messages:[{role:"user",content:`You are KINETIC, a gymnastics coaching AI. Based on these notes from last class, give a practical lesson plan for TODAY. Use real gymnastics terms. 3-4 bullets with •.\n\nNotes: "${notes}"\n\nFormat: one sentence focus, then 3 specific bullets.`}]})});
+    const data=await res.json();
+    if(data.content?.[0]){el.innerHTML=`<div class="ai-txt">${data.content[0].text.replace(/\n/g,'<br>').replace(/•/g,'<strong>•</strong>')}</div><div class="ai-ac"><button class="ai-btn" onclick="window.toast('📋 Saved!','ai')">Save as Plan</button><button class="ai-btn" onclick="loadAI()">↻ Regenerate</button></div>`;}
+  }catch(e){el.innerHTML=`<div class="ai-txt"><strong>• Hollow body check</strong> before every bar approach.<br><strong>• Celebrate</strong> any skills mastered last session.<strong><br>• Conditioning:</strong> 3× hollow holds 30 sec.</div>`;}
+}
+
+// ═══════════════════════════════════════════
+// KINETIC CONTROLLER — all window functions
+// ═══════════════════════════════════════════
+const K = window.K = {
+
+nav(v){ APP.view=v; renderNav(); render(); },
+
+toggleSimple(){ APP.simpleMode=!APP.simpleMode; renderNav(); render(); },
+
+switchTab(t){
+  $('inForm').style.display=t==='in'?'block':'none';
+  $('upForm').style.display=t==='up'?'block':'none';
+  $('siTab').classList.toggle('on',t==='in');
+  $('suTab').classList.toggle('on',t==='up');
+},
+
+pickRole(el){
+  document.querySelectorAll('.r-btn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on'); suRole=el.dataset.role;
+  $('invWrap').classList.toggle('show',suRole==='coach'||suRole==='parent');
+},
+
+async signIn(){
+  const btn=$('inBtn'),err=$('inErr');
+  err.style.display='none';
+  const email=val('inEmail'),pass=val('inPass');
+  if(!email||!pass){err.textContent='Please fill in all fields.';err.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Signing in...';
+  try{await signInWithEmailAndPassword(auth,email,pass);}
+  catch(e){err.textContent=e.code==='auth/invalid-credential'?'Email or password is incorrect.':e.message;err.style.display='block';btn.disabled=false;btn.textContent='Sign In →';}
+},
+
+async signUp(){
+  const btn=$('upBtn'),err=$('upErr');
+  err.style.display='none';
+  const name=val('upName').trim(),email=val('upEmail').trim(),pass=val('upPass'),code=val('upCode').trim().toUpperCase(),role=suRole||'director';
+  if(!name||!email||!pass){err.textContent='Please fill in all fields.';err.style.display='block';return;}
+  if(pass.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return;}
+  if((role==='coach'||role==='parent')&&!code){err.textContent='Coaches and parents need an invite code from their director.';err.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Creating account...';
+  try{
+    let gymId=null,inviteId=null,inviteData={};
+    if(code){
+      const snap=await getDocs(query(collection(db,'invites'),where('code','==',code),where('status','==','pending')));
+      if(snap.empty){err.textContent='Invalid or already used invite code. Ask your director.';err.style.display='block';btn.disabled=false;btn.textContent='Create Account →';return;}
+      inviteId=snap.docs[0].id;inviteData=snap.docs[0].data();gymId=inviteData.gymId||null;
+    }
+    const cred=await createUserWithEmailAndPassword(auth,email,pass);
+    await setDoc(doc(db,'users',cred.user.uid),{name,email,role,belt:inviteData.belt||'Foundation',certifications:[],gymId,gymName:inviteData.gymName||'',createdAt:new Date().toISOString()});
+    if(inviteId)await setDoc(doc(db,'invites',inviteId),{status:'used',usedAt:new Date().toISOString()},{merge:true});
+    toast('✓ Welcome to KINETIC!');
+  }catch(e){err.textContent=e.code==='auth/email-already-in-use'?'An account with this email already exists.':e.message;err.style.display='block';btn.disabled=false;btn.textContent='Create Account →';}
+},
+
+signOut(){ signOut(auth); },
+
+obNext(step){
+  if(step===1){
+    const n=val('ob_gym').trim();if(!n){toast('Gym name required','warn');return;}
+    obData={gymName:n,title:val('ob_title'),city:val('ob_city'),state:val('ob_state'),phone:val('ob_phone')};
+  }
+  if(step===2){
+    obData.coachCount=val('ob_coaches')||'1–3';
+    obData.athCount=val('ob_ath')||'Under 25';
+    obData.programs=[...document.querySelectorAll('input[name="ob_prog"]:checked')].map(c=>c.value);
+  }
+  renderOb(step+1);
+},
+
+async finishOb(){
+  const btn=$('launchBtn');if(btn){btn.disabled=true;btn.textContent='Setting up...';}
+  try{
+    const ref=await addDoc(collection(db,'gyms'),{name:obData.gymName,title:obData.title||'',city:obData.city||'',state:obData.state||'',phone:obData.phone||'',coachCount:obData.coachCount,athCount:obData.athCount,programs:obData.programs||[],plan:obPlan,directorId:APP.user.uid,createdAt:new Date().toISOString()});
+    APP.gymId=ref.id;APP.gymProfile={name:obData.gymName,plan:obPlan};APP.plan=obPlan;
+    await setDoc(doc(db,'users',APP.user.uid),{gymId:ref.id,gymName:obData.gymName,directorTitle:obData.title||''},{merge:true});
+    APP.profile.gymId=ref.id;APP.profile.gymName=obData.gymName;
+    await loadAll();showApp();
+  }catch(e){toast('Setup failed: '+e.message,'warn');if(btn){btn.disabled=false;btn.textContent='Launch My Dashboard →';}}
+},
+
+subscribe(){ toast('💳 Stripe billing coming soon!','ai'); setTimeout(()=>showApp(),1500); },
+
+// ─── MODAL SYSTEM ───
+openModal(id, data={}){
+  // Pre-populate dynamic modals
+  if(id==='addAthModal') $('addAthContent').innerHTML=buildAthForm();
+  if(id==='editAthModal'){const a=APP.allAthletes.find(x=>x.id===data.id);if(!a)return;$('editAthContent').innerHTML=buildAthForm(a,true);}
+  if(id==='viewAthModal'){const a=APP.allAthletes.find(x=>x.id===data.id);if(!a)return;$('viewAthContent').innerHTML=buildAthDetail(a);}
+  if(id==='addClassModal'){
+    const sel=$('nc_level');sel.innerHTML=BELT_LEVELS.map(l=>`<option>${l}</option>`).join('');
+    const csel=$('nc_coach');csel.innerHTML=`<option value="">TBD</option>${APP.allCoaches.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}`;
+    if(data.day)sval('nc_day',data.day);
+  }
+  if(id==='classModal'){const c=APP.allClasses.find(x=>x.id===data.classId);if(!c)return;$('classMoContent').innerHTML=buildClassDetail(c);}
+  if(id==='inviteModal'){
+    const t=data.type||'coach';APP.inviteType=t;
+    $('invTitle').textContent=t==='coach'?'Invite a Coach':'Invite a Parent';
+    $('invDesc').textContent=t==='coach'?'Generate a code for them to use when signing up.':'Generate a code for the parent to create their portal.';
+    $('invBeltWrap').style.display=t==='coach'?'block':'none';
+    $('inv_belt').innerHTML=BELT_LEVELS.slice(0,6).map(l=>`<option>${l}</option>`).join('');
+    $('invResult').style.display='none';$('invActions').style.display='flex';$('invDone').style.display='none';
+    sval('inv_name','');sval('inv_email','');
+  }
+  if(id==='newMsgModal'){
+    const role=data.role||'director';
+    const sel=$('msg_to');
+    if(role==='director'){
+      sel.innerHTML=`<option value="coaches">All Coaches</option><option value="parents">All Parents</option>${APP.allCoaches.map(c=>`<option value="${c.id}">${c.name} (Coach)</option>`).join('')}`;
+    } else if(role==='coach'){
+      sel.innerHTML=`<option value="director">Director</option>`;
+    } else {
+      sel.innerHTML=`<option value="director">Director</option><option value="coaches">My Coach</option>`;
+    }
+    sval('msg_sub','');sval('msg_body','');
+  }
+  if(id==='msgViewModal'){
+    let msgs=APP.messages||[];
+    if(data.role==='coach')msgs=msgs.filter(m=>m.toId===APP.user?.uid||m.toRole==='coaches'||m.fromId===APP.user?.uid);
+    if(data.role==='parent')msgs=msgs.filter(m=>m.toId===APP.user?.uid||m.toRole==='parents'||m.fromId===APP.user?.uid);
+    const m=msgs[data.idx];if(!m)return;
+    $('msgViewContent').innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+        <div><div style="font-size:13px;font-weight:700;">${m.from||'Unknown'} <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;text-transform:uppercase;color:var(--gold);">${m.fromRole||''}</span></div>
+        <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px;margin-top:4px;">${m.subject||''}</h3>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px;">${m.time||''}</div></div>
+        <button class="btn" onclick="K.closeModal('msgViewModal')">✕</button>
+      </div>
+      <div style="font-size:14px;color:var(--t2);line-height:1.7;padding:16px 0;border-top:1px solid var(--bdr);">${m.body||m.preview||''}</div>
+      <div style="margin-top:16px;"><label class="fl">Reply</label>
+        <textarea class="ft" id="replyBody" placeholder="Write a reply..." style="min-height:80px;"></textarea>
+        <button class="btn primary full" style="margin-top:8px;" onclick="K.sendReply('${m.fromId||''}','${m.from||''}','Re: ${(m.subject||'').replace(/'/g,"\\'")}')">Send Reply →</button>
+      </div>`;
+  }
+  if(id==='editTuitionModal'){
+    const a=APP.allAthletes.find(x=>x.id===data.id);if(!a)return;
+    $('editTuitionContent').innerHTML=`
+      <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:16px;">Edit Tuition — ${a.name}</h3>
+      <div class="fg"><label class="fl">Monthly Amount ($)</label><input class="fi" id="et_amt" type="number" value="${a.tuitionAmount||185}"></div>
+      <div class="fg"><label class="fl">Billing Cycle</label><select class="fs" id="et_cycle"><option ${a.billingCycle==='Monthly'?'selected':''}>Monthly</option><option ${a.billingCycle==='Per Semester'?'selected':''}>Per Semester</option><option ${a.billingCycle==='Annual'?'selected':''}>Annual</option></select></div>
+      <div class="fg"><label class="fl">Status</label><select class="fs" id="et_stat"><option ${a.tuitionStatus==='pending'?'selected':''} value="pending">Pending</option><option ${a.tuitionStatus==='paid'?'selected':''} value="paid">Paid</option><option ${a.tuitionStatus==='overdue'?'selected':''} value="overdue">Overdue</option></select></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" style="flex:1;" onclick="K.closeModal('editTuitionModal')">Cancel</button>
+        <button class="btn primary" style="flex:1;" onclick="K.saveTuition('${a.id}')">Save →</button>
+      </div>`;
+  }
+  if(id==='addChargeModal'){
+    $('ch_ath').innerHTML=`<option value="all">All Athletes</option>${APP.allAthletes.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}`;
+  }
+  if(id==='rosterModal'){
+    const c=APP.allClasses.find(x=>x.id===data.classId);if(!c)return;
+    const aths=APP.allAthletes.filter(a=>(c.athletes||[]).includes(a.id));
+    $('rosterContent').innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+        <div><h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;">${c.name}</h3>
+        <div style="font-size:13px;color:var(--t2);margin-top:4px;">${c.day} · ${c.time} · ${c.level}</div></div>
+        <button class="btn" onclick="K.closeModal('rosterModal')">✕</button>
+      </div>
+      ${c.notes?`<div class="alert info" style="font-size:12px;">${c.notes}</div>`:''}
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:8px;">Athletes — ${aths.length}/${c.cap||8}</div>
+      ${aths.length===0?`<div style="padding:16px 0;font-size:13px;color:var(--t3);">No athletes in this class yet.</div>`
+      :aths.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bdr2);">
+        <div class="mini-av">${ini(a.name)}</div>
+        <div style="flex:1;"><div style="font-size:13px;font-weight:600;">${a.name}</div><div style="font-size:11px;color:var(--t3);">${a.level||'Level 1'}</div></div>
+      </div>`).join('')}`;
+  }
+  if(id==='subReqModal'){
+    const my=APP.allClasses.filter(c=>(c.coaches||[]).includes(APP.user?.uid)||c.coachId===APP.user?.uid);
+    $('sub_cls').innerHTML=my.length?my.map(c=>`<option value="${c.id}">${c.name} — ${c.day} ${c.time}</option>`).join(''):`<option>No classes assigned</option>`;
+  }
+  if(id==='lpModal'){$('lpTitle').textContent=data.title?`${data.level} — Week ${data.week}: ${data.title}`:`Week ${data.week}`;}
+  $(id).classList.add('open');
+},
+
+closeModal(id){ $(id).classList.remove('open'); },
+
+// ─── ATHLETE FORM BUILDER ───
+// Not in a view file — always available
+
+// ─── ATTENDANCE ───
+setAtt(i,status){
+  APP.attState[i]=status;
+  const row=$(`ar${i}`);
+  if(row){
+    row.querySelectorAll('.att-btn').forEach(b=>b.className='att-btn');
+    const btns=row.querySelectorAll('.att-btn');
+    if(btns[0])btns[0].className='att-btn'+(status==='present'?' sel-p':'');
+    if(btns[1])btns[1].className='att-btn'+(status==='absent'?' sel-a':'');
+    const p=Object.values(APP.attState).filter(v=>v==='present').length;
+    const t=Object.keys(APP.attState).length;
+    const ep=$('attP'),ea=$('attA');
+    if(ep)ep.textContent=`${p} Present`;if(ea)ea.textContent=`${t-p} Absent`;
+  }
+},
+markAll(s){Object.keys(APP.attState).forEach(i=>K.setAtt(+i,s));},
+async saveAtt(){
+  sync(true);
+  try{
+    await setDoc(doc(db,`attendance/${APP.user.uid}_${new Date().toISOString().split('T')[0]}_${APP.selectedClass?.id||'gen'}`),{date:new Date().toISOString(),attendance:APP.attState,coachId:APP.user.uid,classId:APP.selectedClass?.id||null,gymId:APP.gymId||null},{merge:true});
+    APP.attSaved=true;sync(false);toast('✓ Attendance saved ☁️');
+    setTimeout(()=>render(),500);
+  }catch(e){sync(false);toast('⚠️ '+e.message,'warn');}
+},
+
+// ─── SKILLS ───
+setSkill(ai,skid,status){
+  if(!APP.skillState[ai])APP.skillState[ai]={};
+  APP.skillState[ai][skid]=status;
+  const row=$(`sr${ai}_${skid}`);
+  if(!row)return;
+  row.querySelectorAll('.ssb').forEach(b=>b.className='ssb');
+  const btns=row.querySelectorAll('.ssb');
+  if(status==='nr'&&btns[0])btns[0].className='ssb sel-nr';
+  else if(status==='ip'&&btns[1])btns[1].className='ssb sel-ip';
+  else if(status==='m'&&btns[2])btns[2].className='ssb sel-m';
+  const ls=SKILLS.filter(s=>s.level===(APP.selectedClass?.level||'Level 1'));
+  const m=ls.filter(s=>APP.skillState[ai][s.id]==='m').length;
+  const pct=ls.length?Math.round(m/ls.length*100):0;
+  const bar=$(`spb${ai}`),pctEl=$(`spp${ai}`);
+  if(bar)bar.style.width=pct+'%';if(pctEl)pctEl.textContent=pct+'%';
+},
+async saveSkills(){
+  sync(true);
+  try{
+    await setDoc(doc(db,`skills/${APP.user.uid}_${new Date().toISOString().split('T')[0]}_${APP.selectedClass?.id||'gen'}`),{date:new Date().toISOString(),skills:APP.skillState,coachId:APP.user.uid,classId:APP.selectedClass?.id||null,gymId:APP.gymId||null},{merge:true});
+    sync(false);toast('✓ Skills saved ☁️');
+  }catch(e){sync(false);toast('⚠️ '+e.message,'warn');}
+},
+
+// ─── NOTES ───
+async saveNotes(){
+  const cn=$('cnTa'),inn=$('inTa');
+  if(cn)APP.classNotes=cn.value;if(inn)APP.issueNotes=inn.value;
+  sync(true);
+  try{
+    await setDoc(doc(db,`notes/${APP.user.uid}_${new Date().toISOString().split('T')[0]}_${APP.selectedClass?.id||'gen'}`),{date:new Date().toISOString(),classNotes:APP.classNotes,issueNotes:APP.issueNotes,privateNotes:APP.privateNotes||{},coachId:APP.user.uid,classId:APP.selectedClass?.id||null,gymId:APP.gymId||null},{merge:true});
+    APP.notesSaved=true;sync(false);toast('✓ Notes saved ☁️');render();
+  }catch(e){sync(false);toast('⚠️ '+e.message,'warn');}
+},
+
+// ─── CLOCK IN / OUT ───
+clockIn(){
+  const my=APP.allClasses.filter(c=>(c.coaches||[]).includes(APP.user?.uid)||c.coachId===APP.user?.uid);
+  if(my.length===0){K.doClockIn(null);return;}
+  if(my.length===1){K.doClockIn(my[0]);return;}
+  // Show class picker inline
+  $('mc').innerHTML=`
+    <h2 style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:24px;margin-bottom:6px;">Which class are you teaching?</h2>
+    <p style="font-size:14px;color:var(--t2);margin-bottom:24px;">Select your class to begin tracking.</p>
+    ${my.map(c=>`<div onclick="K.doClockIn(APP.allClasses.find(x=>x.id==='${c.id}'))"
+      style="background:var(--panel);border:2px solid var(--bdr);border-radius:10px;padding:18px 22px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:16px;transition:all 0.15s;"
+      onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--bdr)'">
+      <div style="font-size:32px;">🥋</div>
+      <div style="flex:1;"><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;">${c.name}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-top:4px;">${c.day} · ${c.time}</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:4px;">👧 ${(c.athletes||[]).length} athletes · ${c.level}</div></div>
+      <div style="font-size:22px;color:var(--gold);">→</div>
+    </div>`).join('')}`;
+},
+async doClockIn(cls){
+  APP.clockedIn=true;APP.clockInTime=new Date();
+  APP.clockSessionId='tc_'+APP.user.uid+'_'+Date.now();
+  const aths=cls?APP.allAthletes.filter(a=>(cls.athletes||[]).includes(a.id)):[];
+  APP.selectedClass={...cls,name:cls?.name||'General',day:cls?.day||'',time:cls?.time||'',level:cls?.level||'Level 1',athleteObjects:aths};
+  APP.attState={};aths.forEach((_,i)=>{APP.attState[i]='present';});
+  APP.skillState={};aths.forEach((_,ai)=>{APP.skillState[ai]={};SKILLS.forEach(s=>{APP.skillState[ai][s.id]='nr';});});
+  APP.attSaved=false;APP.notesSaved=false;APP.classNotes='';APP.issueNotes='';
+  try{await setDoc(doc(db,'timecards',APP.clockSessionId),{coachId:APP.user.uid,coachName:APP.profile?.name||'Coach',gymId:APP.gymId||null,classId:cls?.id||null,className:cls?.name||'General',clockIn:APP.clockInTime.toISOString(),clockOut:null,date:APP.clockInTime.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),duration:null,status:'active',directorNote:null});}catch(e){}
+  APP.view='coachAtt';renderNav();render();toast(`✓ Clocked In${cls?` — ${cls.name}`:''}`);
+},
+clockOut(){
+  if(!APP.attSaved||!APP.notesSaved){toast('Complete attendance and notes first','warn');return;}
+  K.openModal('coModal');
+  ['coS1','coS2','coS3','coS4'].forEach((id,i)=>{const e=$(id);if(e)e.style.display=i===0?'block':'none';});
+},
+coTime(yes){$('coS1').style.display='none';$(yes?'coS3':'coS2').style.display='block';},
+async coNote(){
+  const n=val('coNote');
+  if(n&&APP.clockSessionId)try{await setDoc(doc(db,'timecards',APP.clockSessionId),{directorNote:n},{merge:true});}catch(e){}
+  $('coS2').style.display='none';$('coS3').style.display='block';
+},
+coInjury(injured){
+  if(injured){
+    $('coS3').style.display='none';$('coS4').style.display='block';
+    try{addDoc(collection(db,'injuries'),{coachId:APP.user.uid,coachName:APP.profile?.name,gymId:APP.gymId||null,classId:APP.selectedClass?.id,className:APP.selectedClass?.name||'',date:new Date().toISOString(),status:'pending',details:'Auto-logged at clock-out',autoLogged:true});}catch(e){}
+  }else{K.coFinish();}
+},
+async coFinish(){
+  const now=new Date(),diff=APP.clockInTime?Math.floor((now-APP.clockInTime)/60000):0;
+  const h=Math.floor(diff/60),m=diff%60,dur=h>0?`${h}h ${m}m`:`${m}m`;
+  if(APP.clockSessionId)try{await setDoc(doc(db,'timecards',APP.clockSessionId),{clockOut:now.toISOString(),duration:dur,status:'pending'},{merge:true});}catch(e){}
+  APP.clockedIn=false;
+  K.closeModal('coModal');
+  try{const q=await getDocs(query(collection(db,'timecards'),where('coachId','==',APP.user.uid)));APP.myTimecards=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.clockIn||0)-new Date(a.clockIn||0));}catch(e){}
+  renderNav();toast('✓ Clocked Out — Session saved');APP.view='coachDash';render();
+},
+
+// ─── DIRECTOR ACTIONS ───
+async saveNewClass(){
+  const name=val('nc_name').trim(),day=val('nc_day'),time=val('nc_time').trim();
+  const coachId=val('nc_coach'),cap=+val('nc_cap')||8,level=val('nc_level')||'Level 1',notes=val('nc_notes').trim();
+  const coachObj=APP.allCoaches.find(c=>c.id===coachId);
+  const coachName=coachObj?.name||'TBD';
+  if(!name||!time){toast('Name and time required','warn');return;}
+  try{
+    const data={name,day,time,coachId,coachName,coaches:coachId?[coachId]:[],cap,level,notes,athletes:[],gymId:APP.gymId||null,createdAt:new Date().toISOString()};
+    const ref=await addDoc(collection(db,'classes'),data);
+    APP.allClasses.push({id:ref.id,...data});
+    K.closeModal('addClassModal');toast('✓ Class added!');render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async saveNewAthlete(){
+  const name=val('af_name').trim(),parentEmail=val('af_parentEmail').trim();
+  if(!name||!parentEmail){toast('Name and parent email required','warn');return;}
+  const data={
+    name,initials:name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
+    parentEmail,parentName:val('af_parentName')||'',phone:val('af_phone')||'',
+    dob:val('af_dob')||'',emName:val('af_emName')||'',emPhone:val('af_emPhone')||'',
+    level:val('af_level')||'Level 1',medical:val('af_medical')||'',
+    tuitionAmount:+val('af_tuition')||185,billingCycle:val('af_billing')||'Monthly',
+    coachNames:[],gymId:APP.gymId||null,tuitionStatus:'pending',createdAt:new Date().toISOString(),
+  };
+  const selCls=[...document.querySelectorAll('input[name="af_class"]:checked')].map(c=>c.value);
+  try{
+    const ref=await addDoc(collection(db,'athletes'),data);
+    for(const cid of selCls){
+      const cls=APP.allClasses.find(c=>c.id===cid);
+      if(cls){cls.athletes=[...(cls.athletes||[]),ref.id];await setDoc(doc(db,'classes',cid),{athletes:cls.athletes},{merge:true});}
+    }
+    const code=Math.random().toString(36).substr(2,6).toUpperCase();
+    await addDoc(collection(db,'invites'),{email:parentEmail,name:data.parentName||'Parent',role:'parent',code,athleteId:ref.id,athleteName:name,gymId:APP.gymId||null,gymName:APP.gymProfile?.name||'',createdBy:APP.user?.uid,createdAt:new Date().toISOString(),status:'pending'});
+    APP.allAthletes.push({id:ref.id,...data});
+    K.closeModal('addAthModal');toast(`✓ ${name} added! Parent invite: ${code}`);render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async saveEditAthlete(id){
+  const ath=APP.allAthletes.find(a=>a.id===id);if(!ath)return;
+  const g=(elId,fb)=>{const e=$(elId);return e&&e.value.trim()!==''?e.value.trim():fb||'';};
+  const updates={
+    name:g('af_name',ath.name),parentEmail:g('af_parentEmail',ath.parentEmail),
+    parentName:g('af_parentName',ath.parentName||''),phone:g('af_phone',ath.phone||''),
+    dob:val('af_dob')||ath.dob||'',emName:g('af_emName',ath.emName||''),emPhone:g('af_emPhone',ath.emPhone||''),
+    level:val('af_level')||ath.level||'Level 1',medical:g('af_medical',ath.medical||''),
+    tuitionAmount:+val('af_tuition')||ath.tuitionAmount||185,billingCycle:val('af_billing')||ath.billingCycle||'Monthly',
+  };
+  const selCls=[...document.querySelectorAll('input[name="af_class"]:checked')].map(c=>c.value);
+  try{
+    await setDoc(doc(db,'athletes',id),updates,{merge:true});Object.assign(ath,updates);
+    for(const cls of APP.allClasses){
+      const inSel=selCls.includes(cls.id),inCls=(cls.athletes||[]).includes(id);
+      if(inSel&&!inCls){cls.athletes=[...(cls.athletes||[]),id];await setDoc(doc(db,'classes',cls.id),{athletes:cls.athletes},{merge:true});}
+      if(!inSel&&inCls){cls.athletes=cls.athletes.filter(a=>a!==id);await setDoc(doc(db,'classes',cls.id),{athletes:cls.athletes},{merge:true});}
+    }
+    K.closeModal('editAthModal');toast('✓ Athlete updated!');render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async archiveAthlete(id,name){
+  if(!confirm(`Archive ${name}? Data is preserved.`))return;
+  try{
+    await setDoc(doc(db,'athletes',id),{archived:true,archivedAt:new Date().toISOString()},{merge:true});
+    const ath=APP.allAthletes.find(a=>a.id===id);
+    if(ath){APP.allAthletes=APP.allAthletes.filter(a=>a.id!==id);APP.archivedAthletes=[...(APP.archivedAthletes||[]),{...ath,archived:true}];}
+    toast(`✓ ${name} archived`);render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async unarchiveAthlete(id){
+  try{
+    await setDoc(doc(db,'athletes',id),{archived:false,archivedAt:null},{merge:true});
+    const ath=(APP.archivedAthletes||[]).find(a=>a.id===id);
+    if(ath){APP.archivedAthletes=APP.archivedAthletes.filter(a=>a.id!==id);APP.allAthletes=[...APP.allAthletes,{...ath,archived:false}];}
+    toast('✓ Athlete restored');render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async generateInvite(){
+  const name=val('inv_name').trim(),email=val('inv_email').trim(),belt=val('inv_belt')||'Foundation',type=APP.inviteType||'coach';
+  if(!name||!email){toast('Name and email required','warn');return;}
+  const code=Math.random().toString(36).substr(2,6).toUpperCase();
+  try{
+    await addDoc(collection(db,'invites'),{email,name,role:type,belt:type==='coach'?belt:null,code,gymId:APP.gymId||null,gymName:APP.gymProfile?.name||'',createdBy:APP.user?.uid,createdAt:new Date().toISOString(),status:'pending'});
+    $('invCode').textContent=code;$('invResult').style.display='block';$('invActions').style.display='none';$('invDone').style.display='block';
+    toast(`✓ Invite code for ${name}: ${code}`);
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+resetInvite(){$('invResult').style.display='none';$('invActions').style.display='flex';$('invDone').style.display='none';sval('inv_name','');sval('inv_email','');},
+
+async approveTC(id){
+  try{
+    await setDoc(doc(db,'timecards',id),{status:'approved'},{merge:true});
+    const tc=APP.allTimecards?.find(t=>t.id===id);if(tc)tc.status='approved';
+    const el=$(`tca_${id}`);if(el)el.innerHTML=`<span class="pill present">Approved</span>`;
+    toast('✓ Timecard approved');
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async sendMsg(){
+  const to=val('msg_to'),subject=val('msg_sub').trim()||'Message',body=val('msg_body').trim();
+  if(!body){toast('Please write a message','warn');return;}
+  const isCoach=to&&!['coaches','parents','director'].includes(to);
+  try{
+    const data={from:APP.profile?.name||'Director',fromId:APP.user?.uid,fromRole:APP.role,toId:isCoach?to:null,toRole:isCoach?null:to,subject,body,preview:body.slice(0,80),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()};
+    await addDoc(collection(db,'messages'),data);
+    APP.messages=[data,...APP.messages];
+    K.closeModal('newMsgModal');toast('✓ Message sent!');render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async sendReply(toId,toName,subject){
+  const body=val('replyBody').trim();
+  if(!body){toast('Please write a reply','warn');return;}
+  try{
+    const data={from:APP.profile?.name||'User',fromId:APP.user?.uid,fromRole:APP.role,toId:toId||null,toRole:null,subject,body,preview:body.slice(0,80),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),read:false,gymId:APP.gymId||null,createdAt:new Date().toISOString()};
+    await addDoc(collection(db,'messages'),data);
+    APP.messages=[data,...APP.messages];
+    K.closeModal('msgViewModal');toast('✓ Reply sent!');render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async saveTuition(id){
+  const amt=+val('et_amt')||185,cycle=val('et_cycle')||'Monthly',stat=val('et_stat')||'pending';
+  try{
+    await setDoc(doc(db,'athletes',id),{tuitionAmount:amt,billingCycle:cycle,tuitionStatus:stat},{merge:true});
+    const ath=APP.allAthletes.find(a=>a.id===id);if(ath){ath.tuitionAmount=amt;ath.billingCycle=cycle;ath.tuitionStatus=stat;}
+    K.closeModal('editTuitionModal');toast('✓ Tuition updated!');render();
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async saveCharge(){
+  const athId=val('ch_ath'),type=val('ch_type'),amount=+val('ch_amt')||0,desc=val('ch_desc').trim()||type;
+  try{
+    await addDoc(collection(db,'charges'),{athId,type,amount,desc,gymId:APP.gymId||null,createdAt:new Date().toISOString(),status:'pending'});
+    K.closeModal('addChargeModal');toast(`✓ $${amount} charge added!`);
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+async approveSubReq(id){
+  try{await setDoc(doc(db,'subRequests',id),{status:'open'},{merge:true});const r=APP.subRequests?.find(s=>s.id===id);if(r)r.status='open';toast('✓ Posted to Sub Board');render();}catch(e){toast('⚠️ '+e.message,'warn');}
+},
+async denySubReq(id){
+  try{await setDoc(doc(db,'subRequests',id),{status:'denied'},{merge:true});APP.subRequests=APP.subRequests.filter(s=>s.id!==id);toast('Sub request denied');render();}catch(e){}
+},
+async claimSub(id){
+  try{await setDoc(doc(db,'subRequests',id),{subCoachId:APP.user.uid,subCoachName:APP.profile?.name,status:'claimed'},{merge:true});const r=APP.subRequests?.find(s=>s.id===id);if(r){r.subCoachId=APP.user.uid;r.subCoachName=APP.profile?.name;r.status='claimed';}toast('✓ Claim sent to director!');render();}catch(e){toast('⚠️ '+e.message,'warn');}
+},
+async confirmSub(id){
+  try{await setDoc(doc(db,'subRequests',id),{status:'confirmed'},{merge:true});const r=APP.subRequests?.find(s=>s.id===id);if(r)r.status='confirmed';toast('✓ Sub confirmed!');render();}catch(e){}
+},
+async submitSubReq(){
+  const clsId=val('sub_cls'),date=val('sub_date'),reason=val('sub_reason').trim();
+  const cls=APP.allClasses.find(c=>c.id===clsId);
+  if(!date||!reason){toast('Date and reason required','warn');return;}
+  try{
+    await addDoc(collection(db,'subRequests'),{className:cls?.name||'Class',classId:clsId,date,reason,requestedBy:APP.user.uid,requestedByName:APP.profile?.name||'Coach',status:'pending',requiredBelt:cls?.level||'Level 1',time:cls?.time||'',gymId:APP.gymId||null,createdAt:new Date().toISOString()});
+    K.closeModal('subReqModal');toast('✓ Sub request sent!');
+  }catch(e){toast('⚠️ '+e.message,'warn');}
+},
+async resolveInjury(id){
+  try{await setDoc(doc(db,'injuries',id),{status:'resolved'},{merge:true});const inj=APP.allInjuries?.find(i=>i.id===id);if(inj)inj.status='resolved';toast('✓ Resolved');render();}catch(e){}
+},
+
+async saveClassNotes(id){
+  const notes=$(`cls_notes_${id}`)?.value||'';
+  try{await setDoc(doc(db,'classes',id),{notes},{merge:true});const cls=APP.allClasses.find(c=>c.id===id);if(cls)cls.notes=notes;toast('✓ Notes saved!');}catch(e){toast('⚠️ '+e.message,'warn');}
+},
+async addAthToClass(classId,athId){
+  try{const cls=APP.allClasses.find(c=>c.id===classId);if(!cls)return;if(!(cls.athletes||[]).includes(athId)){cls.athletes=[...(cls.athletes||[]),athId];}await setDoc(doc(db,'classes',classId),{athletes:cls.athletes},{merge:true});toast('✓ Athlete added');K.openModal('classModal',{classId});}catch(e){toast('⚠️ '+e.message,'warn');}
+},
+async removeAthFromClass(classId,athId){
+  try{const cls=APP.allClasses.find(c=>c.id===classId);if(!cls)return;cls.athletes=(cls.athletes||[]).filter(a=>a!==athId);await setDoc(doc(db,'classes',classId),{athletes:cls.athletes},{merge:true});toast('✓ Athlete removed');K.openModal('classModal',{classId});}catch(e){toast('⚠️ '+e.message,'warn');}
+},
+
+};
+
+// ─── HELPERS FOR MODAL CONTENT ───
+function buildAthForm(ath={},editing=false){
+  const currentClasses=editing?APP.allClasses.filter(c=>(c.athletes||[]).includes(ath.id)).map(c=>c.id):[];
+  return `
+  <div class="mo-title">${editing?'Edit Athlete':'Add Athlete'}</div>
+  <p style="font-size:13px;color:var(--t2);margin-bottom:16px;">${editing?'Update athlete info below.':'Complete all fields before assigning to a class.'}</p>
+  ${!editing?`<div style="background:rgba(181,153,106,0.08);border:1px solid rgba(181,153,106,0.2);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#7A5C2E;">✓ Parent portal invite code generated automatically.</div>`:''}
+  <div class="fg"><label class="fl">Full Name *</label><input class="fi" id="af_name" placeholder="First Last" value="${ath.name||''}"></div>
+  <div class="g2" style="margin-bottom:0;">
+    <div class="fg"><label class="fl">Date of Birth</label><input class="fi" type="date" id="af_dob" value="${ath.dob||''}"></div>
+    <div class="fg"><label class="fl">Level</label><select class="fs" id="af_level">${BELT_LEVELS.map(l=>`<option ${ath.level===l?'selected':''}>${l}</option>`).join('')}</select></div>
+  </div>
+  <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;margin-top:4px;">Parent / Guardian</div>
+  <div class="fg"><label class="fl">Parent Full Name *</label><input class="fi" id="af_parentName" placeholder="First Last" value="${ath.parentName||''}"></div>
+  <div class="fg"><label class="fl">Parent Email *</label><input class="fi" type="email" id="af_parentEmail" placeholder="parent@email.com" value="${ath.parentEmail||''}"></div>
+  <div class="fg"><label class="fl">Parent Phone</label><input class="fi" type="tel" id="af_phone" placeholder="(555) 000-0000" value="${ath.phone||''}"></div>
+  <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;margin-top:4px;">Emergency Contact</div>
+  <div class="fg"><label class="fl">Name & Relationship</label><input class="fi" id="af_emName" placeholder="Jane Smith (Aunt)" value="${ath.emName||''}"></div>
+  <div class="fg"><label class="fl">Emergency Phone</label><input class="fi" type="tel" id="af_emPhone" placeholder="(555) 000-0000" value="${ath.emPhone||''}"></div>
+  <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;margin-top:4px;">Assign to Classes</div>
+  <div style="border:1px solid var(--bdr);border-radius:4px;background:var(--bg);padding:8px;margin-bottom:14px;max-height:160px;overflow-y:auto;">
+    ${APP.allClasses.length===0?`<div style="font-size:12px;color:var(--t3);padding:8px;">No classes yet.</div>`
+    :APP.allClasses.map(c=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 4px;cursor:pointer;">
+      <input type="checkbox" name="af_class" value="${c.id}" style="accent-color:var(--gold);" ${currentClasses.includes(c.id)?'checked':''}>
+      <span style="font-size:13px;">${c.name} — ${c.day} ${c.time}</span>
+    </label>`).join('')}
+  </div>
+  <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;">Tuition</div>
+  <div class="g2" style="margin-bottom:0;">
+    <div class="fg"><label class="fl">Monthly Amount ($)</label><input class="fi" type="number" id="af_tuition" value="${ath.tuitionAmount||185}"></div>
+    <div class="fg"><label class="fl">Billing Cycle</label><select class="fs" id="af_billing"><option ${ath.billingCycle==='Monthly'?'selected':''}>Monthly</option><option ${ath.billingCycle==='Per Semester'?'selected':''}>Per Semester</option><option ${ath.billingCycle==='Annual'?'selected':''}>Annual</option></select></div>
+  </div>
+  <div class="fg"><label class="fl">Medical Notes / Allergies</label><textarea class="ft" id="af_medical" style="min-height:55px;" placeholder="Any conditions, allergies, or notes...">${ath.medical||''}</textarea></div>
+  <div style="display:flex;gap:8px;">
+    <button class="btn" style="flex:1;" onclick="K.closeModal('${editing?'editAthModal':'addAthModal'}')">Cancel</button>
+    <button class="btn primary" style="flex:1;" onclick="K.${editing?`saveEditAthlete('${ath.id}')`:'saveNewAthlete()'}">${editing?'Save Changes →':'Add Athlete →'}</button>
+  </div>`;
+}
+
+function buildAthDetail(ath){
+  const classes=APP.allClasses.filter(c=>(c.athletes||[]).includes(ath.id));
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="user-av" style="width:48px;height:48px;font-size:16px;">${ini(ath.name)}</div>
+      <div><h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;">${ath.name}</h3>
+      <div class="belt-b" style="margin-top:4px;"><div class="belt-d" style="background:${BELT_COLORS[ath.level]||'#E8C84A'};"></div>${ath.level||'Level 1'}</div></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" onclick="K.closeModal('viewAthModal');K.openModal('editAthModal',{id:'${ath.id}'})">Edit</button>
+      <button class="btn" onclick="K.closeModal('viewAthModal')">✕</button>
+    </div>
+  </div>
+  <div class="g2" style="margin-bottom:14px;">
+    <div><div class="sl">Parent</div><div style="font-size:13px;font-weight:600;">${ath.parentName||'—'}</div><div style="font-size:12px;color:var(--t3);">${ath.parentEmail||'—'}</div><div style="font-size:12px;color:var(--t3);">${ath.phone||'—'}</div></div>
+    <div><div class="sl">Emergency Contact</div><div style="font-size:13px;font-weight:600;">${ath.emName||'—'}</div><div style="font-size:12px;color:var(--t3);">${ath.emPhone||'—'}</div></div>
+  </div>
+  ${ath.medical?`<div class="alert warn" style="margin-bottom:14px;"><strong>Medical:</strong> ${ath.medical}</div>`:''}
+  <div style="margin-bottom:14px;"><div class="sl">Classes Enrolled</div>
+    ${classes.length===0?`<span style="font-size:13px;color:var(--t3);">None</span>`
+    :classes.map(c=>`<span class="pill gold-p" style="margin-right:6px;margin-top:4px;">${c.name} · ${c.day}</span>`).join('')}
+  </div>
+  <div><div class="sl">Tuition</div>
+    <span style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;">$${ath.tuitionAmount||185}/mo</span>
+    <span class="pill ${ath.tuitionStatus==='paid'?'present':ath.tuitionStatus==='overdue'?'absent':'gold-p'}" style="margin-left:8px;">${ath.tuitionStatus||'Pending'}</span>
+  </div>`;
+}
+
+function buildClassDetail(cls){
+  const inClass=APP.allAthletes.filter(a=>(cls.athletes||[]).includes(a.id));
+  const notIn=APP.allAthletes.filter(a=>!(cls.athletes||[]).includes(a.id));
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+    <div><h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;">${cls.name}</h3>
+    <div style="font-size:13px;color:var(--t2);margin-top:4px;">📅 ${cls.day} · ${cls.time} · 🧑‍🏫 ${cls.coachName||'TBD'} · ${cls.level}</div></div>
+    <button class="btn" onclick="K.closeModal('classModal')">✕</button>
+  </div>
+  <div class="fg"><label class="fl">Public Notes (visible to parents)</label>
+    <textarea class="ft" id="cls_notes_${cls.id}" style="min-height:60px;">${cls.notes||''}</textarea>
+    <button class="btn primary" style="margin-top:6px;" onclick="K.saveClassNotes('${cls.id}')">Save Notes</button>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px;">
+    <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;">Athletes (${inClass.length}/${cls.cap||8})</h3>
+  </div>
+  ${inClass.length===0?`<div style="padding:12px 0;font-size:13px;color:var(--t3);">No athletes yet — add some below.</div>`
+  :inClass.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bdr2);">
+    <div class="mini-av">${ini(a.name)}</div>
+    <span style="flex:1;font-size:13px;font-weight:600;">${a.name}</span>
+    <span style="font-size:11px;color:var(--t3);">${a.level||'Level 1'}</span>
+    <button class="btn danger" style="font-size:10px;padding:4px 8px;" onclick="K.removeAthFromClass('${cls.id}','${a.id}')">Remove</button>
+  </div>`).join('')}
+  ${notIn.length>0?`
+  <div style="margin-top:14px;margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);">Add Athletes</div>
+  <div style="max-height:180px;overflow-y:auto;border:1px solid var(--bdr);border-radius:4px;">
+    ${notIn.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--bdr2);">
+      <div class="mini-av">${ini(a.name)}</div>
+      <span style="flex:1;font-size:13px;">${a.name} <span style="color:var(--t3);">${a.level||'Level 1'}</span></span>
+      <button class="btn primary" style="font-size:10px;padding:4px 10px;" onclick="K.addAthToClass('${cls.id}','${a.id}')">+ Add</button>
+    </div>`).join('')}
+  </div>`:''}`;
+}
+
+window.toast=toast;
+</script>
+</body>
+</html>
